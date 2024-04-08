@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+import config
 
 class UNet(nn.Module):
-    def __init__(self, in_channels=1, out_channels=3):
+    def __init__(self, in_channels=config.in_channels, out_channels=config.out_channels): # 4 classes: tumour core, enhancing tumor, edema, background
         super(UNet, self).__init__()
 
         # Encoder (downsampling)
@@ -56,7 +57,6 @@ class UNet(nn.Module):
         out3 = self.out3(dec3)
         out2 = self.out2(dec2)
 
-        if self.training:
-            return torch.sigmoid(dec1), torch.sigmoid(out2), torch.sigmoid(out3), torch.sigmoid(out4), torch.sigmoid(out5)
-        else:
-            return torch.sigmoid(dec1)
+        return dec1 # We simiply output the logits bc the loss function we will use (CrossEntropyLoss) likes to take the logits as input
+
+        

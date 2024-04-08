@@ -16,6 +16,7 @@ def train(model, dataloader, optimizer, criterion, device):
 
         optimizer.zero_grad()
         outputs = model(inputs)
+        targets = torch.squeeze(targets, 1) # Squeeze away the "channel" dimension in targets to get [N, D, H, W] (N being batch size)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
@@ -30,16 +31,18 @@ def train(model, dataloader, optimizer, criterion, device):
 def main():
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
 
     # Load the dataset
     dataset = MRIDataset(config.data_dir)
-    dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True, num_workers=4)
+
+    dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True, num_workers=0)
 
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels).to(device)
 
     # Loss function and optimizer
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss() # We use cross-entropy loss for multi-class prediction
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
     # Training loop

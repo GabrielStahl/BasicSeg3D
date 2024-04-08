@@ -42,7 +42,7 @@ def main():
 
     # Load the dataset
     dataset = MRIDataset(config.data_dir)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=4)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
 
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels).to(device)

@@ -6,11 +6,11 @@ data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/train_data
 
 # Model configuration
 in_channels = 1
-out_channels = 3
+out_channels = 4
 
 # Training configuration
 epochs = 2
-batch_size = 2
+batch_size = 1
 learning_rate = 0.01
 
 # Output configuration

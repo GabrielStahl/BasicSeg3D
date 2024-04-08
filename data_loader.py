@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import nibabel as nib
+import torch
 from torch.utils.data import Dataset, DataLoader
 
 class MRIDataset(Dataset):
@@ -29,6 +30,24 @@ class MRIDataset(Dataset):
         normalized_input = normalized_input.astype(np.float32)
         target_image = target_image.astype(np.float32)
 
+        # Map intensity values to class indices: CE loss will expect target values to be between [0,3] for 4 classes
+        intensity_to_class = {
+            0: 0,  # Background
+            2: 1,  # Outer tumor region
+            4: 2,  # Enhancing tumor
+            1: 3   # Tumor core
+        }
+        map_func = np.vectorize(lambda x: intensity_to_class[x])
+        target_image = map_func(target_image).astype(np.int32)
+
+        # Add 1 channel at index 1 to input and target image to match [batch_size, channels, depth, height, width] expectations by PyTorch
+        normalized_input = np.expand_dims(normalized_input, axis=0)
+        target_image = np.expand_dims(target_image, axis=0)
+
+        # Convert to PyTorch tensors
+        normalized_input = torch.from_numpy(normalized_input).float()
+        target_image = torch.from_numpy(target_image).long() 
+
         return normalized_input, target_image
 
     def _get_patient_folders(self):
@@ -44,4 +63,4 @@ def get_dataloader(data_dir, batch_size=1, shuffle=True, num_workers=0):
     return dataloader
 
 if __name__ == "__main__":
-    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/UCSF-PDGM-v3/" 
+    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/train_data/" 
