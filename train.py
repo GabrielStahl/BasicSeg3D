@@ -18,7 +18,7 @@ def train(model, dataloader, optimizer, criterion, device):
 
         if torch.cuda.is_available():
             print(f"Memory Allocated: {torch.cuda.memory_allocated(device.index) / (1024 ** 3):.2f} GB")
-            print(f"Memory Reserved: {torch.cuda.memory_reserved(device.index) / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated(device.index) / (1024 ** 3):.2f} GB")
 
         optimizer.zero_grad()
         outputs = model(inputs)
