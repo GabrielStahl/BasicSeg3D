@@ -39,17 +39,55 @@ class UNet(nn.Module):
     def forward(self, x):
         # Encoder
         enc1 = self.enc1(x)
+        if torch.cuda.is_available():
+            print(f"After enc1 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         enc2 = self.enc2(nn.functional.interpolate(enc1, scale_factor=0.5, mode='trilinear', align_corners=True))
+        if torch.cuda.is_available():
+            print(f"After enc2 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         enc3 = self.enc3(nn.functional.interpolate(enc2, scale_factor=0.5, mode='trilinear', align_corners=True))
+        if torch.cuda.is_available():
+            print(f"After enc3 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         enc4 = self.enc4(nn.functional.interpolate(enc3, scale_factor=0.5, mode='trilinear', align_corners=True))
+        if torch.cuda.is_available():
+            print(f"After enc4 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         enc5 = self.enc5(nn.functional.interpolate(enc4, scale_factor=0.5, mode='trilinear', align_corners=True))
+        if torch.cuda.is_available():
+            print(f"After enc5 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
 
         # Decoder
         dec5 = self.dec5(enc5)
+        if torch.cuda.is_available():
+            print(f"After dec5 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         dec4 = self.dec4(torch.cat([nn.functional.interpolate(dec5, enc4.size()[2:], mode='trilinear', align_corners=True), enc4], dim=1))
+        if torch.cuda.is_available():
+            print(f"After dec4 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         dec3 = self.dec3(torch.cat([nn.functional.interpolate(dec4, enc3.size()[2:], mode='trilinear', align_corners=True), enc3], dim=1))
+        if torch.cuda.is_available():
+            print(f"After dec3 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         dec2 = self.dec2(torch.cat([nn.functional.interpolate(dec3, enc2.size()[2:], mode='trilinear', align_corners=True), enc2], dim=1))
+        if torch.cuda.is_available():
+            print(f"After dec2 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+
         dec1 = self.dec1(torch.cat([nn.functional.interpolate(dec2, enc1.size()[2:], mode='trilinear', align_corners=True), enc1], dim=1))
+        if torch.cuda.is_available():
+            print(f"After dec1 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
 
         # Deep supervision outputs
         out5 = self.out5(dec5)

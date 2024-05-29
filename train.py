@@ -14,12 +14,6 @@ def train(model, dataloader, optimizer, criterion, device):
     for batch_idx, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
-        print(f"Batch {batch_idx + 1} with batch size {inputs.size(0)} and image size {inputs.size()}")
-
-        if torch.cuda.is_available():
-            print(f"Memory Allocated: {torch.cuda.memory_allocated(device.index) / (1024 ** 3):.2f} GB")
-            print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated(device.index) / (1024 ** 3):.2f} GB")
-
         optimizer.zero_grad()
         outputs = model(inputs)
         targets = torch.squeeze(targets, 1) # Squeeze away the "channel" dimension in targets to get [N, D, H, W] (N being batch size)
