@@ -8,8 +8,10 @@ environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if th
 
 if environment == 'local':
     data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/train_data/"
+    print('Environment is: local')
 elif environment == 'cluster':
     data_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/"
+    print('Environment is: cluster')
 
 
 # Model configuration

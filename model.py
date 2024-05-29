@@ -28,10 +28,10 @@ class UNet(nn.Module):
 
     def conv_block(self, in_channels, out_channels):
         return nn.Sequential(
-            nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1, dtype=torch.float32),
+            nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm3d(out_channels),
             nn.LeakyReLU(negative_slope=0.01, inplace=True),
-            nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1, dtype=torch.float32),
+            nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1), # removed , dtype=torch.float32
             nn.BatchNorm3d(out_channels),
             nn.LeakyReLU(negative_slope=0.01, inplace=True)
         )
