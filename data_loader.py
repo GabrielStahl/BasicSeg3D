@@ -26,7 +26,7 @@ class MRIDataset(Dataset):
         max_value = np.max(input_image)
         normalized_input = input_image / max_value
 
-        # Convert input and target images to float32
+        # Convert input and target images to float32 ()
         normalized_input = normalized_input.astype(np.float32)
         target_image = target_image.astype(np.float32)
 
@@ -45,7 +45,7 @@ class MRIDataset(Dataset):
         target_image = np.expand_dims(target_image, axis=0)
 
         # Convert to PyTorch tensors
-        normalized_input = torch.from_numpy(normalized_input).float()
+        normalized_input = torch.from_numpy(normalized_input).float() # Will convert to float 32 which is enough precision 
         target_image = torch.from_numpy(target_image).long() 
 
         return normalized_input, target_image
