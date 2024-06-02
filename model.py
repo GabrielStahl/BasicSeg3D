@@ -40,6 +40,7 @@ class UNet(nn.Module):
         # Encoder
         enc1 = self.enc1(x)
         if torch.cuda.is_available():
+            print(f"Encoder 1 output shape: {enc1.size()}")
             print(f"After enc1 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
             print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
 
@@ -66,6 +67,7 @@ class UNet(nn.Module):
         # Decoder
         dec5 = self.dec5(enc5)
         if torch.cuda.is_available():
+            print(f"Encoder 1 output shape: {dec5.size()}")
             print(f"After dec5 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
             print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
 
@@ -76,6 +78,7 @@ class UNet(nn.Module):
 
         dec3 = self.dec3(torch.cat([nn.functional.interpolate(dec4, enc3.size()[2:], mode='trilinear', align_corners=True), enc3], dim=1))
         if torch.cuda.is_available():
+            print(f"Encoder 1 output shape: {dec3.size()}")
             print(f"After dec3 - Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
             print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
 
@@ -90,10 +93,10 @@ class UNet(nn.Module):
             print(f"Max Memory Allocated: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
 
         # Deep supervision outputs
-        out5 = self.out5(dec5)
-        out4 = self.out4(dec4)
-        out3 = self.out3(dec3)
-        out2 = self.out2(dec2)
+        #out5 = self.out5(dec5)
+        #out4 = self.out4(dec4)
+        #out3 = self.out3(dec3)
+        #out2 = self.out2(dec2)
 
         return dec1 # We simiply output the logits bc the loss function we will use (CrossEntropyLoss) likes to take the logits as input
 
