@@ -6,24 +6,28 @@ from data_loader import MRIDataset
 from model import UNet
 import config
 from utils import calculate_dice_coefficient
+from torch.cuda.amp import autocast, GradScaler
 
-def train(model, dataloader, optimizer, criterion, device):
+def train(model, dataloader, optimizer, criterion, device, scaler):
     model.train()
     running_loss = 0.0
     running_dice = 0.0
+
     for batch_idx, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
-
         optimizer.zero_grad()
-        outputs = model(inputs)
-        targets = torch.squeeze(targets, 1) # Squeeze away the "channel" dimension in targets to get [N, D, H, W] (N being batch size)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
+
+        with autocast():
+            outputs = model(inputs)
+            targets = torch.squeeze(targets, 1)  # Squeeze away the "channel" dimension in targets to get [N, D, H, W] (N being batch size)
+            loss = criterion(outputs, targets)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         running_loss += loss.item()
         running_dice += calculate_dice_coefficient(outputs.detach(), targets)
-
 
     epoch_loss = running_loss / len(dataloader)
     epoch_dice = running_dice / len(dataloader)
@@ -36,19 +40,21 @@ def main():
 
     # Load the dataset
     dataset = MRIDataset(config.data_dir)
-
     dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True, num_workers=0)
 
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels).to(device)
 
     # Loss function and optimizer
-    criterion = nn.CrossEntropyLoss() # We use cross-entropy loss for multi-class prediction
+    criterion = nn.CrossEntropyLoss()  # We use cross-entropy loss for multi-class prediction
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+
+    # Create the GradScaler
+    scaler = GradScaler()
 
     # Training loop
     for epoch in range(config.epochs):
-        epoch_loss, epoch_dice = train(model, dataloader, optimizer, criterion, device)
+        epoch_loss, epoch_dice = train(model, dataloader, optimizer, criterion, device, scaler)
         print(f"Epoch [{epoch+1}/{config.epochs}], Loss: {epoch_loss:.4f}, Dice: {epoch_dice:.4f}")
 
     # Save the trained model
