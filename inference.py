@@ -5,6 +5,8 @@ from model import UNet
 import config
 from utils import visualize_images
 import os
+import torch.nn as nn
+
 
 def preprocess_image(image_path):
     # Load the NIfTI image
@@ -52,7 +54,12 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Create the model
-    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels).to(device)
+    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
+
+    # To use multiple GPUs, parallelize the model
+    model = nn.DataParallel(model)
+    
+    model.to(device)
     
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
