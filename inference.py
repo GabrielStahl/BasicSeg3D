@@ -6,6 +6,7 @@ import config
 from utils import visualize_images
 import os
 import torch.nn as nn
+from data_loader import MRIDataset
 
 
 def preprocess_image(image_path):
@@ -52,15 +53,12 @@ def perform_inference(model, image_path, device):
 def main():
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
+
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
-
-    # To use multiple GPUs, parallelize the model
     model = nn.DataParallel(model)
-    
     model.to(device)
-    
+
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
         model.load_state_dict(torch.load(config.model_save_path))
@@ -68,25 +66,28 @@ def main():
     else:
         print(f"Trained model weights not found at: {config.model_save_path}")
         return
-    
+
     # Set the model to evaluation mode
     model.eval()
-    
-    # Specify the path to the new, unseen MRI image
-    image_path = "path/to/new/mri/image.nii.gz"
-    
-    # Perform inference
-    segmentation_mask = perform_inference(model, image_path, device)
-    
-    # Visualize the input image and segmentation mask
-    input_image = nib.load(image_path).get_fdata()
-    visualize_images([input_image, segmentation_mask], ["Input Image", "Segmentation Mask"])
-    
-    # Save the segmentation mask as a NIfTI file
-    output_path = "path/to/save/segmentation_mask.nii.gz"
-    segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
-    nib.save(segmentation_nifti, output_path)
-    print(f"Segmentation mask saved at: {output_path}")
+
+    # Split the data into train, validation, and test sets
+    _, val_folders, _ = MRIDataset.split_data(config.data_dir)
+
+    # Create the directory to save the predicted segmentation masks
+    output_dir = "/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Predicted_Segmentations"
+
+    # Perform inference on each validation patient
+    for patient_folder in val_folders:
+        patient_number = patient_folder.split("_")[0].split("-")[-1]
+        image_path = os.path.join(config.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_T2_bias.nii.gz")
+        segmentation_mask = perform_inference(model, image_path, device)
+
+        # Save the segmentation mask as a NIfTI file
+        output_path = os.path.join(output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
+        segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
+        nib.save(segmentation_nifti, output_path)
+        print(f"Segmentation mask saved at: {output_path}")
+
 
 if __name__ == "__main__":
     main()

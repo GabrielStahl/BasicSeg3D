@@ -79,7 +79,7 @@ def main():
     
     model.to(device)
 
-    print("CUDA VERSION REQUIRED:" + torch.backends.cudnn.version())
+    print("CUDA VERSION REQUIRED:" + str(torch.backends.cudnn.version()))
 
     # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()  # We use cross-entropy loss for multi-class prediction
