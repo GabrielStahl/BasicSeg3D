@@ -49,7 +49,7 @@ class UNet(nn.Module):
         dec5 = self.dec5(enc5)
 
         # Print nvidia-smi for memory usage monitoring
-        #os.system('nvidia-smi')
+        os.system('nvidia-smi')
 
         dec4 = self.dec4(torch.cat([nn.functional.interpolate(dec5, enc4.size()[2:], mode='trilinear', align_corners=True), enc4], dim=1))
         dec3 = self.dec3(torch.cat([nn.functional.interpolate(dec4, enc3.size()[2:], mode='trilinear', align_corners=True), enc3], dim=1))
