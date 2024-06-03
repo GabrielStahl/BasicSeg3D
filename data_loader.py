@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 import random
 
 class MRIDataset(Dataset):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, patient_folders):
         self.data_dir = data_dir
         self.patient_folders = self._get_patient_folders()
 
