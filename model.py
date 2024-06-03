@@ -47,7 +47,7 @@ class UNet(nn.Module):
 
         # Decoder
         dec5 = self.dec5(enc5)
-        
+
         # Print nvidia-smi for memory usage monitoring
         os.system('nvidia-smi')
 
