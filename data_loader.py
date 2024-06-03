@@ -14,7 +14,7 @@ class MRIDataset(Dataset):
         return len(self.patient_folders)
     
     def split_data(data_dir, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1):
-        all_patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder]
+        all_patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "0541" not in folder] # Exclude secondary scans and patient 0541 who lacks segmentation
         random.shuffle(all_patient_folders)
 
         num_patients = len(all_patient_folders)
