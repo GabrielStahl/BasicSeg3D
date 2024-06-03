@@ -79,8 +79,6 @@ def main():
     
     model.to(device)
 
-    print("CUDA VERSION REQUIRED:" + str(torch.backends.cudnn.version()))
-
     # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()  # We use cross-entropy loss for multi-class prediction
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
@@ -93,7 +91,14 @@ def main():
         epoch_loss, epoch_dice, val_loss, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
         print(f"Epoch [{epoch+1}/{config.epochs}], Train Loss: {epoch_loss:.4f}, Train Dice: {epoch_dice:.4f}, Val Loss: {val_loss:.4f}, Val Dice: {val_dice:.4f}")
         
+        # Save the model every 5 epochs
+        if (epoch + 1) % 5 == 0:
+            save_path = f"{config.model_save_path}_epoch_{epoch+1}.pth"
+            torch.save(model.state_dict(), save_path)
+            print(f"Model saved to {save_path}")
+
     # Save the trained model
+    save_path = f"{config.model_save_path}_final_epoch.pth"
     torch.save(model.state_dict(), config.model_save_path)
 
 if __name__ == "__main__":
