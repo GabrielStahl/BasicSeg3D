@@ -72,7 +72,12 @@ def main():
     test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False, num_workers=0)
 
     # Create the model
-    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels).to(device)
+    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
+    
+    # To use multiple GPUs, parallelize the model
+    model = nn.DataParallel(model)
+    
+    model.to(device)
 
     # Loss function and optimizer
     criterion = nn.CrossEntropyLoss()  # We use cross-entropy loss for multi-class prediction
