@@ -25,4 +25,5 @@ epochs = 2
 batch_size = 2
 learning_rate = 0.01
 
-# Output configuration
+# Uncertainty quantification configuration
+uncertainty_method = "softmax"  # Options: "None", "softmax", "deep_ensemble", "test-time_augmentation"
