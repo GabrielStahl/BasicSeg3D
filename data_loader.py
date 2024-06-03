@@ -14,7 +14,7 @@ class MRIDataset(Dataset):
         return len(self.patient_folders)
     
     def split_data(data_dir, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1):
-        all_patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "0541" not in folder] # Exclude secondary scans and patient 0541 who lacks segmentation
+        all_patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "541" not in folder] # Exclude secondary scans and patient 0541 who lacks segmentation
         random.shuffle(all_patient_folders)
 
         num_patients = len(all_patient_folders)
@@ -34,12 +34,8 @@ class MRIDataset(Dataset):
         input_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_T2_bias.nii.gz")
         target_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_tumor_segmentation.nii.gz")
 
-        try:
-            input_image = self._load_nifti_image(input_path)
-            target_image = self._load_nifti_image(target_path)
-        except Exception as e:
-            print(f"ATTENTION: Patient {patient_number} encountered an error during data loading: {str(e)}")
-            return None
+        input_image = self._load_nifti_image(input_path)
+        target_image = self._load_nifti_image(target_path)
 
         # Normalize input image based on its max value
         max_value = np.max(input_image)
@@ -70,7 +66,7 @@ class MRIDataset(Dataset):
         return normalized_input, target_image
 
     def _get_patient_folders(self):
-        return [folder for folder in os.listdir(self.data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder]
+        return [folder for folder in os.listdir(self.data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "541" not in folder]
 
     def _load_nifti_image(self, path):
         image = nib.load(path).get_fdata()
