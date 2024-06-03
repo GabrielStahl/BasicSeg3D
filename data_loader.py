@@ -51,7 +51,7 @@ class MRIDataset(Dataset):
         return normalized_input, target_image
 
     def _get_patient_folders(self):
-        return [folder for folder in os.listdir(self.data_dir) if folder.startswith("UCSF-PDGM-")]
+        return [folder for folder in os.listdir(self.data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder]
 
     def _load_nifti_image(self, path):
         image = nib.load(path).get_fdata()
