@@ -27,7 +27,9 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
         scaler.update()
 
         running_loss += loss.item()
-        running_dice += calculate_dice_coefficient(outputs.detach(), targets)
+
+        predicted_labels = torch.argmax(outputs.detach(), dim=1) # Convert logits to class indices before dice calculation
+        running_dice += calculate_dice_coefficient(predicted_labels, targets)
 
     epoch_loss = running_loss / len(train_dataloader)
     epoch_dice = running_dice / len(train_dataloader)
@@ -41,7 +43,7 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
         for inputs, targets in val_dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
 
-            outputs = model(inputs)
+            outputs = model(inputs)  
             targets = torch.squeeze(targets, 1)
             loss = criterion(outputs, targets)
 
