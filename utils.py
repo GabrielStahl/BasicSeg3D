@@ -19,12 +19,16 @@ def calculate_dice_coefficient(pred, target, threshold=0.5):
     CAVE: currently returns 0.0 if an error occurs during calculation.
     """
 
-    pred = (pred > threshold).float()
-    intersection = (pred * target).sum()
-    union = pred.sum() + target.sum()
-    dice = (2.0 * intersection) / (union + 1e-7)
-    return dice.item()
-
+    try:
+        pred = (pred > threshold).float()
+        intersection = (pred * target).sum()
+        union = pred.sum() + target.sum()
+        dice = (2.0 * intersection) / (union + 1e-7)
+        return dice.item()
+    except RuntimeError as e:
+        print(f"Error in calculate_dice_coefficient: {str(e)}")
+        print(f"pred: {pred.shape}, target: {target.shape}")
+        return 0.0
 
 def calculate_metrics(pred, target, threshold=0.5):
     pred = (pred > threshold).float()
