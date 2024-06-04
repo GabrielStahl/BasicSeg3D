@@ -18,6 +18,13 @@ def calculate_dice_coefficient(pred, target, threshold=0.5):
     Calculate the Dice coefficient between predicted and target segmentation masks.
     CAVE: currently returns 0.0 if an error occurs during calculation.
     """
+
+    print(f"Predicted tensor size: {pred.size()}")
+    print(f"Predicted tensor content: {pred}")
+    print(f"Target tensor size: {target.size()}")
+    print(f"Target tensor content: {target}")
+    
+
     try:
         pred = (pred > threshold).float()
         intersection = (pred * target).sum()
