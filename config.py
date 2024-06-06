@@ -22,7 +22,7 @@ out_channels = 4
 
 # Training configuration
 epochs = 2
-batch_size = 2
+batch_size = 1
 learning_rate = 0.01
 
 # Uncertainty quantification configuration

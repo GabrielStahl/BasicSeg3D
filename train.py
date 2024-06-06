@@ -61,7 +61,7 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
 
 def main():
     # Device configuration
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
     # Initialize the distributed environment only if not in local environment
@@ -135,9 +135,9 @@ def main():
     if environment == 'local' or dist.get_rank() == 0:
         save_path = f"{config.model_save_path}_final_epoch.pth"
         if environment != 'local':
-            torch.save(model.module.state_dict(), config.model_save_path)
+            torch.save(model.module.state_dict(), save_path)
         else:
-            torch.save(model.state_dict(), config.model_save_path)
+            torch.save(model.state_dict(), save_path)
 
     # Clean up the distributed environment if not in local environment
     if environment != 'local':
