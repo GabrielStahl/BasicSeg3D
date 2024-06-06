@@ -72,7 +72,7 @@ class MRIDataset(Dataset):
         image = nib.load(path).get_fdata()
         return image
 
-def get_dataloader(data_dir, batch_size=1, shuffle=True, num_workers=0):
+def get_dataloader(data_dir, batch_size=1, shuffle=False, num_workers=0): # we set shuffle to false because the distributedSampler takes care of shuffling
     dataset = MRIDataset(data_dir)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return dataloader

@@ -57,11 +57,10 @@ class UNet(nn.Module):
         dec1 = self.dec1(torch.cat([nn.functional.interpolate(dec2, enc1.size()[2:], mode='trilinear', align_corners=True), enc1], dim=1))
 
         # Deep supervision outputs
-        out5 = self.out5(dec5)
-        out4 = self.out4(dec4)
-        out3 = self.out3(dec3)
-        out2 = self.out2(dec2)
+        #out5 = self.out5(dec5)
+        #out4 = self.out4(dec4)
+        #out3 = self.out3(dec3)
+        #out2 = self.out2(dec2)
 
         return dec1 # We simiply output the logits bc the loss function we will use (CrossEntropyLoss) likes to take the logits as input
 
-        
