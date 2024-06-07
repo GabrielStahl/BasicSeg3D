@@ -111,7 +111,7 @@ def main():
     if environment != 'local':
         device_id = rank % torch.cuda.device_count()
         print(f"Using device id: {device_id}")
-        model = model().to(device_id)
+        model = model.to(device_id)
     else:
         model.to(device)
         print(f"Using device: {device}")
