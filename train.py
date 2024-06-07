@@ -68,7 +68,6 @@ def setup_DDP(rank, world_size):
 def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-    print(f"Using device: {device}")
 
     # Split the data into train, validation, and test sets
     train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
@@ -107,7 +106,15 @@ def main():
 
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
-    model.to(device)
+
+    # Move the model to the appropriate device
+    if environment != 'local':
+        device_id = rank % torch.cuda.device_count()
+        print(f"Using device id: {device_id}")
+        model = model().to(device_id)
+    else:
+        model.to(device)
+        print(f"Using device: {device}")
     
     # Wrap the model with DistributedDataParallel only if not in local environment
     if environment != 'local':

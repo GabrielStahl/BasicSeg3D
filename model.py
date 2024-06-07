@@ -25,10 +25,10 @@ class UNet(nn.Module):
         self.dec1 = nn.Conv3d(32 + 32, out_channels, kernel_size=1)
 
         # Deep supervision outputs
-        self.out5 = nn.Conv3d(256, out_channels, kernel_size=1)
-        self.out4 = nn.Conv3d(128, out_channels, kernel_size=1)
-        self.out3 = nn.Conv3d(64, out_channels, kernel_size=1)
-        self.out2 = nn.Conv3d(32, out_channels, kernel_size=1)
+        #self.out5 = nn.Conv3d(256, out_channels, kernel_size=1)
+        #self.out4 = nn.Conv3d(128, out_channels, kernel_size=1)
+        #self.out3 = nn.Conv3d(64, out_channels, kernel_size=1)
+        #self.out2 = nn.Conv3d(32, out_channels, kernel_size=1)
 
     def conv_block(self, in_channels, out_channels):
         return nn.Sequential(
