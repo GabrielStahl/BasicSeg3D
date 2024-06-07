@@ -59,21 +59,16 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
 
     return epoch_loss, epoch_dice, val_loss, val_dice
 
+def setup_DDP(rank, world_size):
+    master_addr = os.environ['MASTER_ADDR']
+    master_port = os.environ['MASTER_PORT']
+    backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+    dist.init_process_group(backend, init_method=f'tcp://{master_addr}:{master_port}', rank=rank, world_size=world_size)
+
 def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
-
-    # Initialize the distributed environment only if not in local environment
-    environment = config.environment
-    if environment != 'local':
-        backend = 'nccl' if torch.cuda.is_available() else 'gloo'
-        dist.init_process_group(backend=backend)
-        local_rank = int(os.environ['LOCAL_RANK'])
-        torch.cuda.set_device(local_rank)
-        device = torch.device('cuda', local_rank)
-    else:
-        local_rank = 0
 
     # Split the data into train, validation, and test sets
     train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
@@ -84,6 +79,18 @@ def main():
     test_dataset = MRIDataset(config.data_dir, test_folders)
 
     # Create distributed samplers if not in local environment
+    environment = config.environment
+
+    if environment != 'local':
+        rank = int(os.environ['RANK'])
+        world_size = int(os.environ['WORLD_SIZE'])
+        setup_DDP(rank, world_size)
+        local_rank = rank # This is always true as I only use 1 node
+    else:
+        rank = 0
+        world_size = 1
+        local_rank = 0
+
     if environment != 'local':
         train_sampler = DistributedSampler(train_dataset)
         val_sampler = DistributedSampler(val_dataset, shuffle=False)
@@ -101,8 +108,6 @@ def main():
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
     model.to(device)
-
-    print_model_params(model)
     
     # Wrap the model with DistributedDataParallel only if not in local environment
     if environment != 'local':
@@ -124,7 +129,7 @@ def main():
         
         # Save the model every 5 epochs
         if (epoch + 1) % 5 == 0 and (environment == 'local' or dist.get_rank() == 0):
-            save_path = f"{config.model_save_path}_epoch_{epoch+1}.pth"
+            save_path = f"{config.model_save_path}epoch_{epoch+1}.pth"
             if environment != 'local':
                 torch.save(model.module.state_dict(), save_path)
             else:
@@ -133,7 +138,7 @@ def main():
 
     # Save the trained model
     if environment == 'local' or dist.get_rank() == 0:
-        save_path = f"{config.model_save_path}_final_epoch.pth"
+        save_path = f"{config.model_save_path}final_epoch.pth"
         if environment != 'local':
             torch.save(model.module.state_dict(), save_path)
         else:
@@ -142,11 +147,6 @@ def main():
     # Clean up the distributed environment if not in local environment
     if environment != 'local':
         dist.destroy_process_group()
-
-def print_model_params(model):
-    total_params = sum(p.numel() for p in model.parameters())
-    print(f'Total number of parameters: {total_params}')
-
 
 if __name__ == "__main__":
     main()

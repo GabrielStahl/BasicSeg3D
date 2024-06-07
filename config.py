@@ -21,7 +21,7 @@ in_channels = 1
 out_channels = 4
 
 # Training configuration
-epochs = 2
+epochs = 10
 batch_size = 1
 learning_rate = 0.01
 
