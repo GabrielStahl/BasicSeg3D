@@ -6,7 +6,7 @@ from torch.utils.data.distributed import DistributedSampler
 from data_loader import MRIDataset
 from model import UNet
 import config
-from utils import calculate_dice_coefficient
+from utils import calculate_metrics, DiceLoss
 from torch.cuda.amp import autocast, GradScaler
 import torch.distributed as dist
 import os
@@ -14,6 +14,9 @@ import os
 def train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch):
     model.train()
     running_loss = 0.0
+    running_precision = 0.0
+    running_recall = 0.0
+    running_f1 = 0.0
     running_dice = 0.0
 
     for batch_idx, (inputs, targets) in enumerate(train_dataloader):
@@ -22,7 +25,7 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
 
         with autocast():
             outputs = model(inputs)
-            targets = torch.squeeze(targets, 1)  # Squeeze away the "channel" dimension in targets to get [N, D, H, W] (N being batch size)
+            targets = torch.squeeze(targets, 1)
             loss = criterion(outputs, targets)
 
         scaler.scale(loss).backward()
@@ -31,33 +34,50 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
 
         running_loss += loss.item()
 
-        predicted_labels = torch.argmax(outputs.detach(), dim=1) # Convert logits to class indices before dice calculation
-        running_dice += calculate_dice_coefficient(predicted_labels, targets)
+        predicted_labels = torch.argmax(outputs.detach(), dim=1)
+        precision, recall, f1, dice = calculate_metrics(predicted_labels, targets)
+        running_precision += precision
+        running_recall += recall
+        running_f1 += f1
+        running_dice += dice
 
     epoch_loss = running_loss / len(train_dataloader)
+    epoch_precision = running_precision / len(train_dataloader)
+    epoch_recall = running_recall / len(train_dataloader)
+    epoch_f1 = running_f1 / len(train_dataloader)
     epoch_dice = running_dice / len(train_dataloader)
 
     # Evaluate on the validation set
     model.eval()
     val_loss = 0.0
+    val_precision = 0.0
+    val_recall = 0.0
+    val_f1 = 0.0
     val_dice = 0.0
 
     with torch.no_grad():
         for inputs, targets in val_dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
 
-            outputs = model(inputs)  
+            outputs = model(inputs)
             targets = torch.squeeze(targets, 1)
             loss = criterion(outputs, targets)
 
             val_loss += loss.item()
-            predicted_labels = torch.argmax(outputs.detach(), dim=1) 
-            val_dice += calculate_dice_coefficient(predicted_labels, targets)
+            predicted_labels = torch.argmax(outputs.detach(), dim=1)
+            precision, recall, f1, dice = calculate_metrics(predicted_labels, targets)
+            val_precision += precision
+            val_recall += recall
+            val_f1 += f1
+            val_dice += dice
 
     val_loss /= len(val_dataloader)
+    val_precision /= len(val_dataloader)
+    val_recall /= len(val_dataloader)
+    val_f1 /= len(val_dataloader)
     val_dice /= len(val_dataloader)
 
-    return epoch_loss, epoch_dice, val_loss, val_dice
+    return epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice
 
 def setup_DDP(rank, world_size):
     master_addr = os.environ['MASTER_ADDR']
@@ -121,7 +141,7 @@ def main():
         model = nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
 
     # Loss function and optimizer
-    criterion = nn.CrossEntropyLoss()  # We use cross-entropy loss for multi-class prediction
+    criterion = DiceLoss()  # We use cross-entropy loss for multi-class prediction
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
     # Create the GradScaler
@@ -131,9 +151,19 @@ def main():
     for epoch in range(config.epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch) 
-        epoch_loss, epoch_dice, val_loss, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
-        print(f"Epoch [{epoch+1}/{config.epochs}], Train Loss: {epoch_loss:.4f}, Train Dice: {epoch_dice:.4f}, Val Loss: {val_loss:.4f}, Val Dice: {val_dice:.4f}")
-        
+        epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
+        print(f"Epoch [{epoch+1}/{config.epochs}], "
+            f"Train Loss: {epoch_loss:.4f}, "
+            f"Train Precision: {epoch_precision:.4f}, "
+            f"Train Recall: {epoch_recall:.4f}, "
+            f"Train F1: {epoch_f1:.4f}, "
+            f"Train Dice: {epoch_dice:.4f}, "
+            f"Val Loss: {val_loss:.4f}, "
+            f"Val Precision: {val_precision:.4f}, "
+            f"Val Recall: {val_recall:.4f}, "
+            f"Val F1: {val_f1:.4f}, "
+            f"Val Dice: {val_dice:.4f}")
+    
         # Save the model every 5 epochs
         if (epoch + 1) % 5 == 0 and (environment == 'local' or dist.get_rank() == 0):
             save_path = f"{config.model_save_path}epoch_{epoch+1}.pth"
