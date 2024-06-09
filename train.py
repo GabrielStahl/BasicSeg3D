@@ -83,7 +83,7 @@ def setup_DDP(rank, world_size):
     master_addr = os.environ['MASTER_ADDR']
     master_port = os.environ['MASTER_PORT']
     backend = 'nccl' if torch.cuda.is_available() else 'gloo'
-    dist.init_process_group(backend, rank=rank, world_size=world_size) # init_method=f'tcp://{master_addr}:{master_port}',
+    dist.init_process_group(backend, rank=rank, world_size=world_size) 
 
 def main():
     # Device configuration
@@ -101,6 +101,7 @@ def main():
     # Create distributed samplers if not in local environment
     if environment != 'local':
         rank = int(os.environ['RANK'])
+        #print(f"Rank assigned in train.py: {rank}")
         world_size = int(os.environ['WORLD_SIZE'])
         setup_DDP(rank, world_size)
         local_rank = rank # This is always true as I only use 1 node
@@ -130,7 +131,6 @@ def main():
     # Move the model to the appropriate device
     if environment != 'local':
         device_id = rank % torch.cuda.device_count()
-        print(f"Using device id: {device_id}")
         model = model.to(device_id)
     else:
         model.to(device)
@@ -152,10 +152,8 @@ def main():
         if train_sampler is not None:
             train_sampler.set_epoch(epoch) 
 
-        print(f"PyTorch CUDA version: {torch.version.cuda}")
-        print(f"Is CUDA available: {torch.cuda.is_available()}")
-        
-        os.system('nvidia-smi')
+        #print(f"PyTorch CUDA version: {torch.version.cuda}")
+        #os.system('nvidia-smi')
 
         epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
         print(f"Epoch [{epoch+1}/{config.epochs}], "

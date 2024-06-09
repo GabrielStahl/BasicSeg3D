@@ -23,9 +23,13 @@ in_channels = 1
 out_channels = 4
 
 # Training configuration
-epochs = 10
-batch_size = 1
-learning_rate = 0.01
+epochs = 50
+if environment == 'local':
+    batch_size = 1
+    learning_rate = 0.01
+elif environment == 'cluster':
+    batch_size = 2
+    learning_rate = 0.001
 
 # Uncertainty quantification configuration
 uncertainty_method = "softmax"  # Options: "None", "softmax", "deep_ensemble", "test-time_augmentation"
