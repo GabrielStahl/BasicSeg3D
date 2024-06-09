@@ -11,8 +11,6 @@ from torch.cuda.amp import autocast, GradScaler
 import torch.distributed as dist
 import os
 
-print(f"GPUs available: {torch.cuda.device_count()}")
-
 def train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch):
     model.train()
     running_loss = 0.0
@@ -85,7 +83,7 @@ def setup_DDP(rank, world_size):
     master_addr = os.environ['MASTER_ADDR']
     master_port = os.environ['MASTER_PORT']
     backend = 'nccl' if torch.cuda.is_available() else 'gloo'
-    dist.init_process_group(backend, init_method=f'tcp://{master_addr}:{master_port}', rank=rank, world_size=world_size)
+    dist.init_process_group(backend, rank=rank, world_size=world_size) # init_method=f'tcp://{master_addr}:{master_port}',
 
 def main():
     # Device configuration
@@ -154,8 +152,10 @@ def main():
         if train_sampler is not None:
             train_sampler.set_epoch(epoch) 
 
+        print(f"GPUs available: {torch.cuda.device_count()}")
+
         os.system('nvidia-smi')
-        
+
         epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
         print(f"Epoch [{epoch+1}/{config.epochs}], "
             f"Train Loss: {epoch_loss:.4f}, "
