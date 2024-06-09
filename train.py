@@ -153,6 +153,9 @@ def main():
     for epoch in range(config.epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch) 
+
+        os.system('nvidia-smi')
+        
         epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
         print(f"Epoch [{epoch+1}/{config.epochs}], "
             f"Train Loss: {epoch_loss:.4f}, "
