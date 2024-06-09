@@ -11,6 +11,8 @@ from torch.cuda.amp import autocast, GradScaler
 import torch.distributed as dist
 import os
 
+print(f"GPUs available: {torch.cuda.device_count()}")
+
 def train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch):
     model.train()
     running_loss = 0.0
