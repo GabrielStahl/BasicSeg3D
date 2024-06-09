@@ -88,6 +88,7 @@ def setup_DDP(rank, world_size):
 def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    environment = config.environment
 
     # Split the data into train, validation, and test sets
     train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
@@ -98,23 +99,22 @@ def main():
     test_dataset = MRIDataset(config.data_dir, test_folders)
 
     # Create distributed samplers if not in local environment
-    environment = config.environment
-
     if environment != 'local':
         rank = int(os.environ['RANK'])
         world_size = int(os.environ['WORLD_SIZE'])
         setup_DDP(rank, world_size)
         local_rank = rank # This is always true as I only use 1 node
+
+        # Create distributed samplers
+        train_sampler = DistributedSampler(train_dataset)
+        val_sampler = DistributedSampler(val_dataset, shuffle=False)
+        test_sampler = DistributedSampler(test_dataset, shuffle=False)
     else:
         rank = 0
         world_size = 1
         local_rank = 0
 
-    if environment != 'local':
-        train_sampler = DistributedSampler(train_dataset)
-        val_sampler = DistributedSampler(val_dataset, shuffle=False)
-        test_sampler = DistributedSampler(test_dataset, shuffle=False)
-    else:
+        # Set samplers to None
         train_sampler = None
         val_sampler = None
         test_sampler = None
@@ -152,8 +152,9 @@ def main():
         if train_sampler is not None:
             train_sampler.set_epoch(epoch) 
 
-        print(f"GPUs available: {torch.cuda.device_count()}")
-
+        print(f"PyTorch CUDA version: {torch.version.cuda}")
+        print(f"Is CUDA available: {torch.cuda.is_available()}")
+        
         os.system('nvidia-smi')
 
         epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
