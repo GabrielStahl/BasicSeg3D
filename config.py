@@ -32,4 +32,4 @@ elif environment == 'cluster':
     learning_rate = 0.001
 
 # Uncertainty quantification configuration
-uncertainty_method = "softmax"  # Options: "None", "softmax", "deep_ensemble", "test-time_augmentation"
+uncertainty_method = "test_time_augmentation"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"
