@@ -28,8 +28,8 @@ if environment == 'local':
     batch_size = 1
     learning_rate = 0.01
 elif environment == 'cluster':
-    batch_size = 2
-    learning_rate = 0.001
+    batch_size = 1
+    learning_rate = 0.01
 
 # Uncertainty quantification configuration
-uncertainty_method = "test_time_augmentation"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"
+uncertainty_method = "softmax"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"

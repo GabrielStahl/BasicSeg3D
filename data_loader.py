@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 import config
 
 class MRIDataset(Dataset):
-    def __init__(self, data_dir, patient_folders, crop_size=(150, 180, 116)):
+    def __init__(self, data_dir, patient_folders, crop_size=(150, 180, 116), transform=None):
         self.data_dir = data_dir
         self.patient_folders = self._get_patient_folders()
         self.crop_size = crop_size
+        self.transform = transform
 
     def __len__(self):
         return len(self.patient_folders)
@@ -64,6 +65,11 @@ class MRIDataset(Dataset):
         # Convert to PyTorch tensors
         normalized_input = torch.from_numpy(normalized_input).float() # Will convert to float 32 which is enough precision
         target_image = torch.from_numpy(target_image).long()
+
+
+        # Apply transform if provided
+        if self.transform:
+            normalized_input = self.transform(normalized_input)
 
         return normalized_input, target_image
 
