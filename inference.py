@@ -10,6 +10,7 @@ import torchvision.transforms as v2
 from torchvision.transforms import functional as F
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+import torchio as tio
 
 class Inference:
     """ Perform inference using the trained model, optionally with uncertainty maps"""
@@ -138,7 +139,7 @@ class Inference:
         
         return segmentation_masks, uncertainties
 
-    def perform_inference_test_time_augmentation(self, data_loader, device, augmentation_rounds=2):
+    def perform_inference_test_time_augmentation_old(self, data_loader, device, augmentation_rounds=2):
         """ Perform inference with test-time augmentation for aleatoric uncertainty estimation"""
         self.model.eval()
         segmentation_masks = []
@@ -173,6 +174,57 @@ class Inference:
                 uncertainties.append(np.mean(entropy, axis=0))
 
         return segmentation_masks, uncertainties
+    
+    def perform_inference_test_time_augmentation(self, test_loader, device, augmentationRounds=2):
+        """
+        Define custom test step function that uses test-time augmentation to estimate aleatoric uncertainty
+
+        Args:
+            model (torch model): Model to be evaluated
+            test_loader (custom DataLoader): DataLoader for test set
+            augmentationRounds (int): Number of augmentations to perform
+        
+        """
+        self.model.eval()
+
+        # Define the test-time augmentation transforms
+        # ATTENTION: LESS IS MORE here. Too many augmentations lead to decrease in model performance
+        test_transforms = tio.Compose([
+            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05)),  # Random affine transformation
+            tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),  # Random flip
+        ])
+
+        with torch.no_grad():
+            for images, labels in tqdm(test_loader):
+                batch_predictions = []
+                for _ in range(augmentationRounds):
+
+                    # only squeeze if dim > 4
+                    if len(images.shape) > 4:
+                        images = images.squeeze(0)
+                    augmented_images = test_transforms(images)                    
+                    augmented_images = augmented_images.unsqueeze(0).to(device)
+                    classifications_logits = self.model(augmented_images)
+                    outputs = classifications_logits[0] # store first logits as 'outputs' to maintain convention                
+                    batch_predictions.append(outputs.cpu().numpy())
+
+                # Convert batch_predictions to labels
+                batch_predictions = np.array(batch_predictions)  # shape: (augmentationRounds, batch_size, num_classes)
+                batch_labels = np.argmax(batch_predictions, axis=1)  # shape: (augmentationRounds, batch_size)
+
+                # Perform majority voting
+                segmentation_masks = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
+
+                labels = labels.float().to(device)
+
+                # Compute entropy as uncertainty measure
+                softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1)
+                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0)
+                entropy = entropy.cpu().numpy()
+                uncertainty = np.max(entropy, axis=0)
+
+        return segmentation_masks, uncertainty
+
 
 def main():
     # Device configuration
@@ -184,7 +236,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model_save_path = os.path.join(config.model_save_path, "final_epoch.pth")
+        model_save_path = os.path.join(config.model_save_path, "epoch_20_cluster.pth")
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path}")
     else:
@@ -202,11 +254,7 @@ def main():
     # Create an instance of the Inference class based on the selected uncertainty estimation method
     inference = Inference(model, config.uncertainty_method)
     
-    # Create the dataset and data loader
-    if config.uncertainty_method == "test_time_augmentation":
-        dataset = MRIDataset(config.data_dir, train_folders, transform=inference.test_transforms)
-    else:
-        dataset = MRIDataset(config.data_dir, train_folders)
+    dataset = MRIDataset(config.data_dir, train_folders)
     
     data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
@@ -247,11 +295,14 @@ def main():
             patient_number = train_folders[i].split("_")[0].split("-")[-1]
             
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
+            segmentation_mask = segmentation_mask.astype(np.int32) # Convert segmentation_mask to int32 or float32
+
             segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
             nib.save(segmentation_nifti, output_path)
             print(f"Segmentation mask saved at: {output_path}")
             
             uncertainty_path = os.path.join(config.output_dir, f"uncertainty_UCSF-PDGM-{patient_number}.nii.gz")
+            uncertainty_map = uncertainty_map.astype(np.float32) # Convert uncertainty_map to int32 or float32
             uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
             nib.save(uncertainty_nifti, uncertainty_path)
             print(f"Uncertainty map saved at: {uncertainty_path}")
