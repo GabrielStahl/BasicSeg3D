@@ -80,8 +80,8 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
     return epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice
 
 def setup_DDP(rank, world_size):
-    master_addr = os.environ['MASTER_ADDR']
-    master_port = os.environ['MASTER_PORT']
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "54321"
     backend = 'nccl' if torch.cuda.is_available() else 'gloo'
     dist.init_process_group(backend, rank=rank, world_size=world_size) 
 
@@ -100,9 +100,8 @@ def main():
 
     # Create distributed samplers if not in local environment
     if environment != 'local':
-        rank = int(os.environ['RANK'])
-        #print(f"Rank assigned in train.py: {rank}")
-        world_size = int(os.environ['WORLD_SIZE'])
+        rank = 0 # We only use 1 node
+        world_size = 2 # as we use 2 GPUs
         setup_DDP(rank, world_size)
         local_rank = rank # This is always true as I only use 1 node
 
