@@ -10,6 +10,7 @@ from utils import calculate_metrics, DiceLoss
 from torch.cuda.amp import autocast, GradScaler
 import torch.distributed as dist
 import os
+import socket
 
 def train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch):
     model.train()
@@ -80,14 +81,13 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
     return epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice
 
 def setup_DDP(rank, world_size):
-    #os.environ["MASTER_ADDR"] = "localhost"
-    #os.environ["MASTER_PORT"] = "54227"
+    os.environ["MASTER_ADDR"] = socket.gethostbyname(socket.gethostname())
+    os.environ["MASTER_PORT"] = "33227"
     backend = 'nccl' if torch.cuda.is_available() else 'gloo'
     dist.init_process_group(backend, rank=rank, world_size=world_size) 
 
 def main():
     # Device configuration
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     environment = config.environment
 
     # Split the data into train, validation, and test sets
@@ -100,10 +100,17 @@ def main():
 
     # Create distributed samplers if not in local environment
     if environment != 'local':
-        rank = 0 # We only use 1 node
-        world_size = 2 # as we use 2 GPUs
+        world_size = int(os.environ['NPROCS'])
+        rank = int(os.environ['SGE_TASK_ID']) - 1
+        local_rank = int(os.environ['SGE_GPU'])
         setup_DDP(rank, world_size)
-        local_rank = rank # This is always true as I only use 1 node
+
+        print(f"NPROCS: {os.environ.get('NPROCS')}")
+        print(f"SGE_TASK_ID: {os.environ.get('SGE_TASK_ID')}")
+        print(f"SGE_GPU: {os.environ.get('SGE_GPU')}")
+
+        device_id = local_rank % torch.cuda.device_count()
+        device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
         # Create distributed samplers
         train_sampler = DistributedSampler(train_dataset)
