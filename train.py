@@ -81,7 +81,7 @@ def train(model, train_dataloader, val_dataloader, optimizer, criterion, device,
 
 def setup_DDP(rank, world_size):
     os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "54321"
+    os.environ["MASTER_PORT"] = "54227"
     backend = 'nccl' if torch.cuda.is_available() else 'gloo'
     dist.init_process_group(backend, rank=rank, world_size=world_size) 
 
