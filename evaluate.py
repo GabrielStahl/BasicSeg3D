@@ -3,45 +3,66 @@ from torch.utils.data import DataLoader
 from data_loader import MRIDataset
 from model import UNet
 import config
-from utils import calculate_dice_coefficient, calculate_metrics
+from utils import calculate_metrics_EVAL
 import os
 
-def evaluate(model, dataloader, device):
+def evaluate(model, val_dataloader, device):
+    # Evaluate on the validation set
     model.eval()
-    dice_scores = []
-    precisions = []
-    recalls = []
-    f1_scores = []
+    val_metrics = {
+        'avg_precision': 0.0,
+        'avg_recall': 0.0,
+        'avg_f1': 0.0,
+        'avg_dice': 0.0,
+        'precision_background': 0.0,
+        'precision_outer_tumour': 0.0,
+        'precision_enhancing_tumour': 0.0,
+        'precision_tumour_core': 0.0,
+        'recall_background': 0.0,
+        'recall_outer_tumour': 0.0,
+        'recall_enhancing_tumour': 0.0,
+        'recall_tumour_core': 0.0,
+        'f1_background': 0.0,
+        'f1_outer_tumour': 0.0,
+        'f1_enhancing_tumour': 0.0,
+        'f1_tumour_core': 0.0,
+        'dice_background': 0.0,
+        'dice_outer_tumour': 0.0,
+        'dice_enhancing_tumour': 0.0,
+        'dice_tumour_core': 0.0
+    }
 
     with torch.no_grad():
-        for inputs, targets in dataloader:
+        for inputs, targets in val_dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
 
-            outputs = model(inputs)
-            predictions = torch.sigmoid(outputs)
+            outputs = model(inputs) # torch.Size([1, 4, 150, 180, 116]) with logits for 4 classes
+            targets = torch.squeeze(targets, 0) # squeeze the batch dimension, retain dim with class indices [0, 1, 2, 3], see intensity_to_class in data_loader.py
 
-            dice = calculate_dice_coefficient(predictions, targets)
-            precision, recall, f1 = calculate_metrics(predictions, targets)
+            predicted_labels = torch.argmax(outputs.detach(), dim=1) # now torch.Size([1, 150, 180, 116]) with class indices of maximum logits
+            metrics = calculate_metrics_EVAL(predicted_labels, targets) # returns all metrics values across all classes
 
-            dice_scores.append(dice)
-            precisions.append(precision)
-            recalls.append(recall)
-            f1_scores.append(f1)
+            for key, value in metrics.items():
+                val_metrics[key] += value
 
-    avg_dice = sum(dice_scores) / len(dice_scores)
-    avg_precision = sum(precisions) / len(precisions)
-    avg_recall = sum(recalls) / len(recalls)
-    avg_f1 = sum(f1_scores) / len(f1_scores)
+    num_samples = len(val_dataloader)
+    for key in val_metrics.keys():
+        val_metrics[key] /= num_samples
 
-    return avg_dice, avg_precision, avg_recall, avg_f1
+    return val_metrics
 
 
 def main():
     # Device configuration
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
+    # Split the data into train, validation, and test sets
+    train_folders, val_folders, _ = MRIDataset.split_data(config.data_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0)
+
+    print(f"Number of validation patients: {len(train_folders)}")
 
     # Load the dataset
-    dataset = MRIDataset(config.data_dir)
+    dataset = MRIDataset(config.data_dir, train_folders)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
 
     # Create the model
@@ -49,19 +70,18 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model.load_state_dict(torch.load(config.model_save_path))
+        model_save_path = os.path.join(config.model_save_path, "epoch_20_cluster.pth")
+        model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path}")
     else:
         print(f"Trained model weights not found at: {config.model_save_path}")
         return
 
     # Evaluate the model
-    avg_dice, avg_precision, avg_recall, avg_f1 = evaluate(model, dataloader, device)
+    val_metrics = evaluate(model, dataloader, device)
 
-    print(f"Average Dice Coefficient: {avg_dice:.4f}")
-    print(f"Average Precision: {avg_precision:.4f}")
-    print(f"Average Recall: {avg_recall:.4f}")
-    print(f"Average F1 Score: {avg_f1:.4f}")
+    for key, value in val_metrics.items():
+        print(f"{key}: {value:.4f}")
 
 if __name__ == "__main__":
     main()

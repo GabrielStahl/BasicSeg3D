@@ -58,14 +58,13 @@ class MRIDataset(Dataset):
         map_func = np.vectorize(lambda x: intensity_to_class[x])
         target_image = map_func(target_image).astype(np.int32)
 
-        # Add 1 channel at index 1 to input and target image to match [batch_size, channels, depth, height, width] expectations by PyTorch
+        # Add 1 channel at index 0 to input and target image to match [batch_size, channels, depth, height, width] expectations by PyTorch
         normalized_input = np.expand_dims(normalized_input, axis=0)
         target_image = np.expand_dims(target_image, axis=0)
 
         # Convert to PyTorch tensors
         normalized_input = torch.from_numpy(normalized_input).float() # Will convert to float 32 which is enough precision
         target_image = torch.from_numpy(target_image).long()
-
 
         # Apply transform if provided
         if self.transform:
