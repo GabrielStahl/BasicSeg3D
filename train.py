@@ -98,16 +98,18 @@ def main():
     val_dataset = MRIDataset(config.data_dir, val_folders)
     test_dataset = MRIDataset(config.data_dir, test_folders)
 
-    # Create distributed samplers if not in local environment
+    # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
         world_size = int(os.environ['NPROCS'])
         rank = int(os.environ['SGE_TASK_ID']) - 1
         local_rank = int(os.environ['SGE_GPU'])
-        setup_DDP(rank, world_size)
 
-        print(f"NPROCS: {os.environ.get('NPROCS')}")
-        print(f"SGE_TASK_ID: {os.environ.get('SGE_TASK_ID')}")
-        print(f"SGE_GPU: {os.environ.get('SGE_GPU')}")
+        # print variables for debugging
+        print(f"World size: {world_size}")
+        print(f"Rank: {rank}")
+        print(f"Local rank: {local_rank}")
+
+        setup_DDP(rank, world_size)
 
         device_id = local_rank % torch.cuda.device_count()
         device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
