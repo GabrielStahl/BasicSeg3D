@@ -89,6 +89,7 @@ def setup_DDP(rank, world_size):
 def main():
     # Device configuration
     environment = config.environment
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
     # Split the data into train, validation, and test sets
     train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)

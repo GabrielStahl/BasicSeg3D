@@ -22,13 +22,16 @@ elif environment == 'cluster':
 in_channels = 1
 out_channels = 4
 
+# Data configuration
+crop_size = (150, 180, 155)
+
 # Training configuration
-epochs = 50
+epochs = 70
 if environment == 'local':
     batch_size = 1
     learning_rate = 0.01
 elif environment == 'cluster':
-    batch_size = 2
+    batch_size = 1
     learning_rate = 0.01
 
 # Uncertainty quantification configuration

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import config
 
 class MRIDataset(Dataset):
-    def __init__(self, data_dir, patient_folders, crop_size=(150, 180, 116), transform=None):
+    def __init__(self, data_dir, patient_folders, crop_size=config.crop_size, transform=None):
         self.data_dir = data_dir
         self.patient_folders = self._get_patient_folders()
         self.crop_size = crop_size
@@ -110,18 +110,18 @@ def visualize_example(data_dir):
 
     # Visualize the original and cropped input image
     plt.subplot(1, 2, 1)
-    plt.imshow(original_input_image[:, :, original_input_image.shape[2] // 2], cmap='gray')
+    plt.imshow(original_input_image[:, original_input_image.shape[2] // 2, :], cmap='gray')
     plt.title("Original Input Image")
     plt.axis('off')
 
     plt.subplot(1, 2, 2)
-    plt.imshow(input_image[:, :, input_image.shape[2] // 2], cmap='gray')
+    plt.imshow(input_image[:, input_image.shape[2] // 2, :], cmap='gray')
     plt.title("Cropped Input Image")
     plt.axis('off')
 
     plt.tight_layout()
     plt.show()
 
-#if __name__ == "__main__":
-    #data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/evaluate_data/"
-    #visualize_example(data_dir)
+if __name__ == "__main__":
+    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/evaluate_data/"
+    visualize_example(data_dir)

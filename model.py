@@ -2,9 +2,13 @@ import torch
 import torch.nn as nn
 import config
 import os
+import warnings
 
 # Set the environment variable for MPS fallback
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+
+# Suppress warnings
+warnings.filterwarnings("ignore")
 
 class UNet(nn.Module):
     def __init__(self, in_channels=config.in_channels, out_channels=config.out_channels): # 4 classes: tumour core, enhancing tumor, edema, background

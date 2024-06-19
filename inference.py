@@ -24,7 +24,7 @@ class Inference:
 
         self.model = model
         self.uncertainty_method = uncertainty_method
-        self.crop_size = (150, 180, 116)
+        self.crop_size = config.crop_size
         self.original_shape = (240, 240, 155)
 
         # Define transforms for test-time augmentation 
@@ -236,7 +236,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model_save_path = os.path.join(config.model_save_path, "epoch_20_cluster.pth")
+        model_save_path = os.path.join(config.model_save_path, "epoch_10.pth")#"epoch_20_cluster.pth")
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path}")
     else:
