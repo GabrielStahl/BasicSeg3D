@@ -101,12 +101,7 @@ def main():
 
     # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
-        # print all environment variables and their contents
-        print(" Print all environment variables and their contents:")
-        for key in os.environ.keys():
-            print(f"{key} = {os.environ[key]}")
-
-
+        
         world_size = int(os.environ['NPROCS'])
         rank = int(os.environ['SGE_TASK_ID']) - 1
         local_rank = int(os.environ['SGE_GPU'])
