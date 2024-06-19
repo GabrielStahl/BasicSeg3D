@@ -101,10 +101,10 @@ def main():
 
     # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
-        
-        world_size = int(os.environ['NPROCS'])
-        rank = int(os.environ['SGE_TASK_ID']) - 1
-        local_rank = int(os.environ['SGE_GPU'])
+
+        world_size = 1
+        rank = 0
+        local_rank = 0
 
         setup_DDP(rank, world_size)
 
