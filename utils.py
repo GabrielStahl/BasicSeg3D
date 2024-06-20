@@ -19,11 +19,11 @@ class DiceLoss(nn.Module):
     """ Calculate Dice loss for each class separately and return average
     
     Args:
-        pred (torch.Tensor): Predictions from the model
-        target (torch.Tensor): Ground truth labels
+        pred (torch.Tensor): Predictions from the model, torch.Size([1, 4, 150, 180, 155]) with logits for 4 classes at dim 1
+        target (torch.Tensor): Ground truth labels, torch.Size([1, 150, 180, 155]): Wit class incides [0,1,2,3] at dim 0
 
     Returns:
-        torch.Tensor: Dice loss
+        torch.Tensor: Dice loss, scalar value
     """
     def __init__(self):
         super(DiceLoss, self).__init__()
@@ -31,7 +31,7 @@ class DiceLoss(nn.Module):
     def forward(self, pred, target):
         pred = torch.softmax(pred, dim=1)
         dice_scores = []
-        for class_idx in range(pred.size(1)):
+        for class_idx in range(1, pred.size(1)):  # Exclude background class
             pred_class = pred[:, class_idx, ...]
             target_class = (target == class_idx).float()
             dice = (2.0 * (pred_class * target_class).sum()) / (pred_class.sum() + target_class.sum() + 1e-7)
@@ -42,6 +42,8 @@ def calculate_metrics(pred, target):
     """
     Calculate precision, recall, f1 score and dice coefficient for multi-class segmentation
     Compute metrics for each class separately and return separately + the average
+
+    CAVE: BACKGROUND class is excluded from the average metrics
 
     Args:
         pred (torch.Tensor), torch.Size([1, 150, 180, 116]): With class indices [0,1,2,3] of maximum logits at dim 0
@@ -70,11 +72,11 @@ def calculate_metrics(pred, target):
         f1[class_idx] = 2 * precision[class_idx] * recall[class_idx] / (precision[class_idx] + recall[class_idx] + 1e-7)
         dice[class_idx] = 2 * true_positive / (2 * true_positive + false_positive + false_negative + 1e-7)
 
-    # Calculate average metrics
-    avg_precision = torch.mean(precision)
-    avg_recall = torch.mean(recall)
-    avg_f1 = torch.mean(f1)
-    avg_dice = torch.mean(dice)
+    # Calculate average metrics (excluding background class)
+    avg_precision = torch.mean(precision[1:])
+    avg_recall = torch.mean(recall[1:])
+    avg_f1 = torch.mean(f1[1:])
+    avg_dice = torch.mean(dice[1:])
 
     return avg_precision, avg_recall, avg_f1, avg_dice
 

@@ -236,7 +236,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model_save_path = os.path.join(config.model_save_path, "epoch_10.pth")#"epoch_20_cluster.pth")
+        model_save_path = os.path.join(config.model_save_path, "epoch_40_cluster.pth")#"epoch_20_cluster.pth")
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path}")
     else:

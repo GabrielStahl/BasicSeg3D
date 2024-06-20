@@ -26,13 +26,14 @@ out_channels = 4
 crop_size = (150, 180, 155)
 
 # Training configuration
-epochs = 70
 if environment == 'local':
     batch_size = 1
     learning_rate = 0.01
+    epochs = 2
 elif environment == 'cluster':
     batch_size = 1
     learning_rate = 0.01
+    epochs = 50
 
 # Uncertainty quantification configuration
 uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"
