@@ -36,4 +36,4 @@ elif environment == 'cluster':
     epochs = 50
 
 # Uncertainty quantification configuration
-uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"
+uncertainty_method = "test_time_augmentation"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"

@@ -138,42 +138,6 @@ class Inference:
                 uncertainties.append(uncertainty_map)
         
         return segmentation_masks, uncertainties
-
-    def perform_inference_test_time_augmentation_old(self, data_loader, device, augmentation_rounds=2):
-        """ Perform inference with test-time augmentation for aleatoric uncertainty estimation"""
-        self.model.eval()
-        segmentation_masks = []
-        uncertainties = []
-
-        with torch.no_grad():
-            for r in range(augmentation_rounds):
-                print(f"Augmentation round: {r+1}/{augmentation_rounds}")
-
-                batch_predictions = []
-                for input_tensor, _ in data_loader:
-                    input_tensor = input_tensor.to(device)
-                    output = self.model(input_tensor)
-                    batch_predictions.append(output.cpu().numpy())
-
-                # Convert batch_predictions to labels
-                batch_predictions = np.array(batch_predictions)  # shape: (batch_size, num_classes, depth, height, width)
-                batch_labels = np.argmax(batch_predictions, axis=1)  # shape: (batch_size, depth, height, width)
-
-                # Perform majority voting
-                majority_labels = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
-
-                # Compute entropy as uncertainty measure
-                softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1)
-                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=1)
-                entropy = entropy.cpu().numpy()
-
-                # Postprocess the output
-                segmentation_mask = self.postprocess_output(torch.tensor(majority_labels))
-
-                segmentation_masks.append(segmentation_mask)
-                uncertainties.append(np.mean(entropy, axis=0))
-
-        return segmentation_masks, uncertainties
     
     def perform_inference_test_time_augmentation(self, test_loader, device, augmentationRounds=2):
         """
@@ -181,8 +145,12 @@ class Inference:
 
         Args:
             model (torch model): Model to be evaluated
-            test_loader (custom DataLoader): DataLoader for test set
+            test_loader (custom DataLoader): DataLoader for inference set
             augmentationRounds (int): Number of augmentations to perform
+        
+        Returns:
+            segmentation_masks (list): List of segmentation masks, each of shape (240, 240, 155)
+            uncertainties (list): List of uncertainty maps, each of shape (240, 240, 155)
         
         """
         self.model.eval()
@@ -193,6 +161,9 @@ class Inference:
             tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05)),  # Random affine transformation
             tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),  # Random flip
         ])
+
+        segmentation_masks = []
+        uncertainties = []
 
         with torch.no_grad():
             for images, labels in tqdm(test_loader):
@@ -205,25 +176,37 @@ class Inference:
                     augmented_images = test_transforms(images)                    
                     augmented_images = augmented_images.unsqueeze(0).to(device)
                     classifications_logits = self.model(augmented_images)
-                    outputs = classifications_logits[0] # store first logits as 'outputs' to maintain convention                
+                    outputs = classifications_logits.squeeze() # squeeze batch dimensionsd            
                     batch_predictions.append(outputs.cpu().numpy())
 
                 # Convert batch_predictions to labels
-                batch_predictions = np.array(batch_predictions)  # shape: (augmentationRounds, batch_size, num_classes)
-                batch_labels = np.argmax(batch_predictions, axis=1)  # shape: (augmentationRounds, batch_size)
+                batch_predictions = np.array(batch_predictions)  # shape: (augmentationRounds, class logits, 150, 180, 155)
+                batch_labels = np.argmax(batch_predictions, axis=1)  # shape: (augmentationRounds, 150, 180, 155)
 
                 # Perform majority voting
-                segmentation_masks = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
+                segmentation_mask = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
+
+                # Pad the segmentation mask to the original shape
+                segmentation_mask = self.pad_to_original_shape(segmentation_mask)
+
+                segmentation_masks.append(segmentation_mask)
 
                 labels = labels.float().to(device)
 
                 # Compute entropy as uncertainty measure
+                epsilon = 1e-8
                 softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1)
+                softmax_probs = softmax_probs + epsilon
                 entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0)
                 entropy = entropy.cpu().numpy()
                 uncertainty = np.max(entropy, axis=0)
 
-        return segmentation_masks, uncertainty
+                # Pad the uncertainty map to the original shape
+                uncertainty = self.pad_to_original_shape(uncertainty)
+
+                uncertainties.append(uncertainty)
+
+        return segmentation_masks, uncertainties
 
 
 def main():
@@ -236,18 +219,19 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model_save_path = os.path.join(config.model_save_path, "epoch_40_cluster.pth")#"epoch_20_cluster.pth")
+        weights = "epoch_40_cluster.pth"
+        model_save_path = os.path.join(config.model_save_path, weights)
         model.load_state_dict(torch.load(model_save_path, map_location=device))
-        print(f"Loaded trained model weights from: {config.model_save_path}")
+        print(f"Loaded trained model weights from: {config.model_save_path + weights}")
     else:
-        print(f"Trained model weights not found at: {config.model_save_path}")
+        print(f"Trained model weights not found at: {config.model_save_path + weights}")
         return
 
     # Set the model to evaluation mode
     model.eval()
 
     # Split the data into train, validation, and test sets
-    train_folders, val_folders, _ = MRIDataset.split_data(config.data_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0)
+    train_folders, _, _ = MRIDataset.split_data(config.data_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0)
 
     print(f"Number of validation patients: {len(train_folders)}")
 
