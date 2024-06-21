@@ -62,15 +62,16 @@ class Inference:
         segmentation_mask = map_func(output_numpy).astype(np.uint8)
         
         # Pad the segmentation mask to the original shape
-        padded_mask = self.pad_to_original_shape(segmentation_mask)
+        padded_mask = self.pad_to_original_shape(segmentation_mask, dtype=np.uint8)
         
         return padded_mask
     
-    def pad_to_original_shape(self, segmentation_mask):
+    def pad_to_original_shape(self, mask, dtype=np.uint8):
         """ Pad the segmentation mask to the original shape
         
         Args: 
-            segmentation_mask (np.ndarray): The segmentation mask to pad
+            mask (np.ndarray): The mask to pad
+            dtype: The data type of the output mask
         """
 
         depth, height, width = self.original_shape
@@ -80,10 +81,11 @@ class Inference:
         pad_height = (height - crop_height) // 2
         pad_width = (width - crop_width) // 2
 
-        padded_mask = np.zeros(self.original_shape, dtype=np.uint8)
-        padded_mask[pad_depth:pad_depth+crop_depth, pad_height:pad_height+crop_height, pad_width:pad_width+crop_width] = segmentation_mask
+        padded_mask = np.zeros(self.original_shape, dtype=dtype)
+        padded_mask[pad_depth:pad_depth+crop_depth, pad_height:pad_height+crop_height, pad_width:pad_width+crop_width] = mask
 
         return padded_mask
+
     
     def perform_inference_none(self, data_loader, device):
         """ Perform inference without uncertainty estimation"""
@@ -126,7 +128,7 @@ class Inference:
 
                 # squeeze batch dimension, pad to original shape
                 uncertainty_map = uncertainty_map.squeeze(0)
-                uncertainty_map = self.pad_to_original_shape(uncertainty_map.detach().cpu().numpy())
+                uncertainty_map = self.pad_to_original_shape(uncertainty_map.detach().cpu().numpy(), dtype=np.float32)
                 
                 # Apply argmax to obtain the class indices
                 output = torch.argmax(output_probabilities, dim=1)
@@ -184,10 +186,10 @@ class Inference:
                 batch_labels = np.argmax(batch_predictions, axis=1)  # shape: (augmentationRounds, 150, 180, 155)
 
                 # Perform majority voting
-                segmentation_mask = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
+                segmentation_mask_cropped = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
 
                 # Pad the segmentation mask to the original shape
-                segmentation_mask = self.pad_to_original_shape(segmentation_mask)
+                segmentation_mask = self.pad_to_original_shape(segmentation_mask_cropped, dtype=np.uint8)
 
                 segmentation_masks.append(segmentation_mask)
 
@@ -195,14 +197,16 @@ class Inference:
 
                 # Compute entropy as uncertainty measure
                 epsilon = 1e-8
-                softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1)
-                softmax_probs = softmax_probs + epsilon
-                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0)
+                softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1) # convert logits to probabilities
+                softmax_probs = softmax_probs + epsilon # add epsilon to avoid log(0)
+                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) 
                 entropy = entropy.cpu().numpy()
-                uncertainty = np.max(entropy, axis=0)
+
+                # Compute uncertainty as the mean entropy across all classes (for now, reconsider later)
+                uncertainty = np.mean(entropy, axis=0)
 
                 # Pad the uncertainty map to the original shape
-                uncertainty = self.pad_to_original_shape(uncertainty)
+                uncertainty = self.pad_to_original_shape(uncertainty, dtype=np.float32)
 
                 uncertainties.append(uncertainty)
 
@@ -219,7 +223,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        weights = "epoch_40_cluster.pth"
+        weights = "cluster_epoch_25.pth"
         model_save_path = os.path.join(config.model_save_path, weights)
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path + weights}")

@@ -7,7 +7,7 @@ import os
 environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if the environment variable is not set
 
 if environment == 'local':
-    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/train_data/"
+    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/evaluate_data/" #evaluate_data/ or train_data/
     model_save_path = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/BasicSeg3D/checkpoints/"
     output_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/BasicSeg3D/Predicted_Segmentations/"
     print('Environment is: local')
@@ -36,4 +36,4 @@ elif environment == 'cluster':
     epochs = 50
 
 # Uncertainty quantification configuration
-uncertainty_method = "test_time_augmentation"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"
+uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation"
