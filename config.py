@@ -31,7 +31,7 @@ if environment == 'local':
     learning_rate = 0.01
     epochs = 2
 elif environment == 'cluster':
-    batch_size = 1
+    batch_size = 2
     learning_rate = 0.01
     epochs = 50
 

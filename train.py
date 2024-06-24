@@ -103,8 +103,8 @@ def main():
     if environment != 'local':
 
         world_size = 1
-        rank = 0
-        local_rank = 0
+        local_rank = int(os.environ["LOCAL_RANK"])
+        rank = local_rank # because we are using a single node
 
         setup_DDP(rank, world_size)
 
