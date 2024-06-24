@@ -136,6 +136,7 @@ def main():
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
     model = model.to(device)
+    print(f"model moved to device: {device} with rank: {rank}")
 
     # Wrap the model with DistributedDataParallel only if not in local environment
     if environment != 'local':
@@ -152,9 +153,6 @@ def main():
     for epoch in range(config.epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch) 
-
-        #print(f"PyTorch CUDA version: {torch.version.cuda}")
-        #os.system('nvidia-smi')
 
         epoch_loss, epoch_precision, epoch_recall, epoch_f1, epoch_dice, val_loss, val_precision, val_recall, val_f1, val_dice = train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch)
         print(f"Epoch [{epoch+1}/{config.epochs}], "
