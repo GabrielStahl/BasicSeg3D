@@ -89,7 +89,6 @@ def setup_DDP(rank, world_size):
 def main():
     # Device configuration
     environment = config.environment
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
     # Split the data into train, validation, and test sets
     train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
@@ -109,7 +108,8 @@ def main():
         setup_DDP(rank, world_size)
 
         device_id = local_rank % torch.cuda.device_count()
-        device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+        device = torch.device(f"cuda:{device_id}")
+        print(f"Rank: {rank}, World size: {world_size}, Local rank: {local_rank}, USING Device ID: {device_id}")
 
         # Create distributed samplers
         train_sampler = DistributedSampler(train_dataset)
@@ -125,6 +125,9 @@ def main():
         val_sampler = None
         test_sampler = None
 
+        device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
+
     # Create data loaders
     train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=train_sampler, shuffle=(train_sampler is None), num_workers=0)
     val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, sampler=val_sampler, shuffle=False, num_workers=0)
@@ -132,15 +135,8 @@ def main():
 
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
+    model = model.to(device)
 
-    # Move the model to the appropriate device
-    if environment != 'local':
-        device_id = rank % torch.cuda.device_count()
-        model = model.to(device_id)
-    else:
-        model.to(device)
-        print(f"Using device: {device}")
-    
     # Wrap the model with DistributedDataParallel only if not in local environment
     if environment != 'local':
         model = nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
