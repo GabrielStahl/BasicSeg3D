@@ -212,13 +212,57 @@ class Inference:
 
         return segmentation_masks, uncertainties
 
+    def perform_inference_dropout(self, data_loader, device, num_iterations=10):
+        """ Perform inference with dropout for uncertainty estimation
+        
+        Args:
+            data_loader (torch.utils.data.DataLoader): The data loader
+            device (torch.device): The device to run inference on
+            num_iterations (int): The number of iterations to perform for dropout uncertainty estimation
+        
+        Returns:
+            segmentation_masks (list): List of segmentation masks, each of shape (240, 240, 155)
+            uncertainties (list): List of uncertainty maps, each of shape (240, 240, 155)
+        """
+
+
+        self.model.train()  # Set the model to train mode to enable dropout
+        segmentation_masks = []
+        uncertainties = []
+
+        with torch.no_grad():
+            for input_tensor, _ in tqdm(data_loader):
+                input_tensor = input_tensor.to(device)
+                outputs = []
+
+                for _ in range(num_iterations):
+                    output = self.model(input_tensor)
+                    output = nn.functional.softmax(output, dim=1)
+                    outputs.append(output)
+
+                # Compute the mean and variance of the outputs
+                outputs = torch.stack(outputs)
+                mean_output = torch.mean(outputs, dim=0)
+                var_output = torch.var(outputs, dim=0)
+
+                # Apply argmax to obtain the class indices
+                segmentation_mask = torch.argmax(mean_output, dim=1)
+                segmentation_mask = self.postprocess_output(segmentation_mask)
+                segmentation_masks.append(segmentation_mask)
+
+                # Compute the epistemic uncertainty
+                uncertainty = torch.mean(var_output, dim=1)
+                uncertainty = self.pad_to_original_shape(uncertainty.squeeze().cpu().numpy(), dtype=np.float32)
+                uncertainties.append(uncertainty)
+
+        return segmentation_masks, uncertainties
 
 def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
     # Create the model
-    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
+    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels, dropout=config.dropout)
     model.to(device)
 
     # Load the trained model weights
@@ -291,6 +335,22 @@ def main():
             
             uncertainty_path = os.path.join(config.output_dir, f"uncertainty_UCSF-PDGM-{patient_number}.nii.gz")
             uncertainty_map = uncertainty_map.astype(np.float32) # Convert uncertainty_map to int32 or float32
+            uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
+            nib.save(uncertainty_nifti, uncertainty_path)
+            print(f"Uncertainty map saved at: {uncertainty_path}")
+
+    elif config.uncertainty_method == "dropout":
+        segmentation_masks, uncertainties = inference.perform_inference_dropout(data_loader, device)
+        
+        for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
+            patient_number = train_folders[i].split("_")[0].split("-")[-1]
+            
+            output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
+            segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
+            nib.save(segmentation_nifti, output_path)
+            print(f"Segmentation mask saved at: {output_path}")
+            
+            uncertainty_path = os.path.join(config.output_dir, f"uncertainty_UCSF-PDGM-{patient_number}.nii.gz")
             uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
             nib.save(uncertainty_nifti, uncertainty_path)
             print(f"Uncertainty map saved at: {uncertainty_path}")
