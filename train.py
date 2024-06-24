@@ -102,7 +102,7 @@ def main():
     # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
 
-        world_size = 1
+        world_size = int(os.environ['WORLD_SIZE'])
         local_rank = int(os.environ["LOCAL_RANK"])
         rank = local_rank # because we are using a single node
 
