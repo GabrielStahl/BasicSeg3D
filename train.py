@@ -134,7 +134,7 @@ def main():
     test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, sampler=test_sampler, shuffle=False, num_workers=0)
 
     # Create the model
-    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels)
+    model = UNet(in_channels=config.in_channels, out_channels=config.out_channels, dropout=config.dropout)
     model = model.to(device)
     print(f"model moved to device: {device} with rank: {rank}")
 

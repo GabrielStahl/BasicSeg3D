@@ -21,6 +21,7 @@ elif environment == 'cluster':
 # Model configuration
 in_channels = 1
 out_channels = 4
+dropout = 0.3
 
 # Data configuration
 crop_size = (150, 180, 155)
@@ -40,5 +41,3 @@ uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "tes
 
 if uncertainty_method == "dropout":
     dropout = 0.5
-else:
-    dropout = None
