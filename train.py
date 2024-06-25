@@ -11,6 +11,7 @@ from torch.cuda.amp import autocast, GradScaler
 import torch.distributed as dist
 import os
 import socket
+import sys
 
 def train(model, train_dataloader, val_dataloader, optimizer, criterion, device, scaler, epoch):
     model.train()
@@ -149,6 +150,12 @@ def main():
     # Create the GradScaler
     scaler = GradScaler()
 
+    # Read argument for saving the model
+    if len(sys.argv) > 1:
+        modelID = sys.argv[1]
+    else:
+        modelID = "basicseg3d"
+
     # Training loop
     for epoch in range(config.epochs):
         if train_sampler is not None:
@@ -169,7 +176,7 @@ def main():
     
         # Save the model every 5 epochs
         if (epoch + 1) % 5 == 0 and (environment == 'local' or dist.get_rank() == 0):
-            save_path = f"{config.model_save_path}model_1_epoch_{epoch+1}.pth"
+            save_path = f"{config.model_save_path}{modelID}_epoch_{epoch+1}.pth"
             if environment != 'local':
                 torch.save(model.module.state_dict(), save_path)
             else:
@@ -178,11 +185,13 @@ def main():
 
     # Save the trained model
     if environment == 'local' or dist.get_rank() == 0:
-        save_path = f"{config.model_save_path}final_epoch.pth"
+        save_path = f"{config.model_save_path}{modelID}_final_epoch.pth"
         if environment != 'local':
             torch.save(model.module.state_dict(), save_path)
+            print(f"Model saved to {save_path}")
         else:
             torch.save(model.state_dict(), save_path)
+            print(f"Model saved to {save_path}")
 
     # Clean up the distributed environment if not in local environment
     if environment != 'local':
