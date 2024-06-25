@@ -169,7 +169,7 @@ def main():
     
         # Save the model every 5 epochs
         if (epoch + 1) % 5 == 0 and (environment == 'local' or dist.get_rank() == 0):
-            save_path = f"{config.model_save_path}epoch_{epoch+1}.pth"
+            save_path = f"{config.model_save_path}model_1_epoch_{epoch+1}.pth"
             if environment != 'local':
                 torch.save(model.module.state_dict(), save_path)
             else:
