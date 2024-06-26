@@ -10,7 +10,7 @@ import config
 class MRIDataset(Dataset):
     def __init__(self, data_dir, patient_folders, crop_size=config.crop_size, transform=None):
         self.data_dir = data_dir
-        self.patient_folders = self._get_patient_folders()
+        self.patient_folders = patient_folders #self._get_patient_folders()
         self.crop_size = crop_size
         self.transform = transform
 
@@ -73,6 +73,7 @@ class MRIDataset(Dataset):
         return normalized_input, target_image
 
     def _get_patient_folders(self):
+        """Use this function to get all pattient folders in the data directory"""
         return [folder for folder in os.listdir(self.data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "541" not in folder]
 
     def _load_nifti_image(self, path):
