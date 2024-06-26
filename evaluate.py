@@ -57,12 +57,12 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
     # Split the data into train, validation, and test sets
-    train_folders, val_folders, _ = MRIDataset.split_data(config.data_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0)
+    test_folders, _, _ = MRIDataset.split_data(config.test_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0) # don't split because all patients in test_folder should be used
 
-    print(f"Number of validation patients: {len(train_folders)}")
+    print(f"Number of validation patients: {len(test_folders)}")
 
     # Load the dataset
-    dataset = MRIDataset(config.data_dir, train_folders)
+    dataset = MRIDataset(config.data_dir, test_folders)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
 
     # Create the model
@@ -70,7 +70,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model_save_path = os.path.join(config.model_save_path, "epoch_20_cluster.pth")
+        model_save_path = os.path.join(config.model_save_path, "model_1_final_epoch.pth")
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path}")
     else:
