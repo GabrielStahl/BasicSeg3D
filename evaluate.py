@@ -63,7 +63,7 @@ def main():
     print(f"Number of validation patients: {len(test_folders)}")
 
     # Load the dataset
-    dataset = MRIDataset(config.data_dir, test_folders)
+    dataset = MRIDataset(config.test_dir, test_folders)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
 
     # Create the model
