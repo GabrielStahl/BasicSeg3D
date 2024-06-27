@@ -5,6 +5,7 @@ from model import UNet
 import config
 from utils import calculate_metrics_EVAL
 import os
+import tqdm
 print("import successful")
 
 def evaluate(model, val_dataloader, device):
@@ -34,7 +35,7 @@ def evaluate(model, val_dataloader, device):
     }
 
     with torch.no_grad():
-        for inputs, targets in val_dataloader:
+        for inputs, targets in tqdm.tqdm(val_dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
 
             outputs = model(inputs) # torch.Size([1, 4, 150, 180, 116]) with logits for 4 classes

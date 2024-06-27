@@ -8,7 +8,7 @@ environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if th
 
 if environment == 'local':
     data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/evaluate_data/" #evaluate_data/ or train_data/
-    test_dir = data_dir
+    test_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/test_data/"
     model_save_path = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/BasicSeg3D/checkpoints/"
     output_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/BasicSeg3D/Predicted_Segmentations/"
     print('Environment is: local')

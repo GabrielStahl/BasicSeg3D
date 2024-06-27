@@ -93,7 +93,7 @@ class Inference:
         segmentation_masks = []
 
         with torch.no_grad():
-            for input_tensor, _ in data_loader:
+            for input_tensor, _ in tqdm(data_loader):
                 input_tensor = input_tensor.to(device)
                 output = self.model(input_tensor)
                 
@@ -116,7 +116,7 @@ class Inference:
         uncertainties = []
 
         with torch.no_grad():
-            for input_tensor, _ in data_loader:
+            for input_tensor, _ in tqdm(data_loader):
                 input_tensor = input_tensor.to(device)
                 output = self.model(input_tensor)
                 
@@ -267,7 +267,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        weights = "cluster_epoch_25.pth"
+        weights = "model_1_final_epoch.pth"
         model_save_path = os.path.join(config.model_save_path, weights)
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path + weights}")
@@ -279,14 +279,15 @@ def main():
     model.eval()
 
     # Split the data into train, validation, and test sets
-    train_folders, _, _ = MRIDataset.split_data(config.data_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0)
+    inference_folders, _, _ = MRIDataset.split_data(config.test_dir, train_ratio=0.1, val_ratio=0.0, test_ratio=0.0)
 
-    print(f"Number of validation patients: {len(train_folders)}")
+    print(f"Getting patients from directory: {config.test_dir}")
+    print(f"Performing inference on: {len(inference_folders)} patients")
 
     # Create an instance of the Inference class based on the selected uncertainty estimation method
     inference = Inference(model, config.uncertainty_method)
     
-    dataset = MRIDataset(config.data_dir, train_folders)
+    dataset = MRIDataset(config.test_dir, inference_folders)
     
     data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
@@ -298,7 +299,7 @@ def main():
         segmentation_masks = inference.perform_inference_none(data_loader, device)
         
         for i, segmentation_mask in enumerate(segmentation_masks):
-            patient_number = train_folders[i].split("_")[0].split("-")[-1]
+            patient_number = inference_folders[i].split("_")[0].split("-")[-1]
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
             segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
             nib.save(segmentation_nifti, output_path)
@@ -308,7 +309,7 @@ def main():
         segmentation_masks, uncertainties = inference.perform_inference_softmax(data_loader, device)
         
         for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
-            patient_number = train_folders[i].split("_")[0].split("-")[-1]
+            patient_number = inference_folders[i].split("_")[0].split("-")[-1]
             
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
             segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
@@ -324,7 +325,7 @@ def main():
         segmentation_masks, uncertainties = inference.perform_inference_test_time_augmentation(data_loader, device)
         
         for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
-            patient_number = train_folders[i].split("_")[0].split("-")[-1]
+            patient_number = inference_folders[i].split("_")[0].split("-")[-1]
             
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
             segmentation_mask = segmentation_mask.astype(np.int32) # Convert segmentation_mask to int32 or float32
@@ -343,7 +344,7 @@ def main():
         segmentation_masks, uncertainties = inference.perform_inference_dropout(data_loader, device)
         
         for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
-            patient_number = train_folders[i].split("_")[0].split("-")[-1]
+            patient_number = inference_folders[i].split("_")[0].split("-")[-1]
             
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
             segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
