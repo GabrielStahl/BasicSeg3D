@@ -5,6 +5,7 @@ from model import UNet
 import config
 from utils import calculate_metrics_EVAL
 import os
+print("import successful")
 
 def evaluate(model, val_dataloader, device):
     # Evaluate on the validation set
