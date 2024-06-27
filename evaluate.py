@@ -59,6 +59,7 @@ def main():
     # Split the data into train, validation, and test sets
     test_folders, _, _ = MRIDataset.split_data(config.test_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0) # don't split because all patients in test_folder should be used
 
+    print(f"Evaluating performance on patients in: {config.test_dir}")
     print(f"Number of validation patients: {len(test_folders)}")
 
     # Load the dataset
