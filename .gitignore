@@ -3,9 +3,5 @@
 *.pth
 __pycache__/
 /__pycache__
-*.pyc
-__pycache__/
-__pycache__/
-__pycache__/
 .DS_Store
 /Predicted_segmentations

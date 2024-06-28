@@ -39,7 +39,7 @@ elif environment == 'cluster':
     epochs = 80
 
 # Uncertainty quantification configuration
-uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout"
+uncertainty_method = "dropout"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout"
 
 if uncertainty_method == "dropout":
     dropout = 0.5

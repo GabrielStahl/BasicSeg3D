@@ -124,12 +124,12 @@ class Inference:
                 output_probabilities = nn.functional.softmax(output, dim=1)
                 
                 # Get the uncertainty map
-                uncertainty_map = torch.max(output_probabilities, dim=1)[0]
+                uncertainty_map = 1 - torch.max(output_probabilities, dim=1)[0]
 
                 # squeeze batch dimension, pad to original shape
                 uncertainty_map = uncertainty_map.squeeze(0)
                 uncertainty_map = self.pad_to_original_shape(uncertainty_map.detach().cpu().numpy(), dtype=np.float32)
-                
+
                 # Apply argmax to obtain the class indices
                 output = torch.argmax(output_probabilities, dim=1)
                 
@@ -142,74 +142,65 @@ class Inference:
         return segmentation_masks, uncertainties
     
     def perform_inference_test_time_augmentation(self, test_loader, device, augmentationRounds=2):
-        """
-        Define custom test step function that uses test-time augmentation to estimate aleatoric uncertainty
-
-        Args:
-            model (torch model): Model to be evaluated
-            test_loader (custom DataLoader): DataLoader for inference set
-            augmentationRounds (int): Number of augmentations to perform
-        
-        Returns:
-            segmentation_masks (list): List of segmentation masks, each of shape (240, 240, 155)
-            uncertainties (list): List of uncertainty maps, each of shape (240, 240, 155)
-        
-        """
         self.model.eval()
-
+        
         # Define the test-time augmentation transforms
-        # ATTENTION: LESS IS MORE here. Too many augmentations lead to decrease in model performance
         test_transforms = tio.Compose([
-            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05)),  # Random affine transformation
-            tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),  # Random flip
+            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05)),
+            tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),
         ])
-
+        
         segmentation_masks = []
         uncertainties = []
-
+        
         with torch.no_grad():
             for images, labels in tqdm(test_loader):
                 batch_predictions = []
                 for _ in range(augmentationRounds):
-
-                    # only squeeze if dim > 4
                     if len(images.shape) > 4:
                         images = images.squeeze(0)
-                    augmented_images = test_transforms(images)                    
-                    augmented_images = augmented_images.unsqueeze(0).to(device)
+                    
+                    # Create a TorchIO subject which can store transform history for later reversal
+                    subject = tio.Subject({"image": tio.ScalarImage(tensor=images)})
+                    
+                    # Apply transform, send to device, and get model predictions
+                    transformed = test_transforms(subject)
+                    augmented_images = transformed['image'].data.unsqueeze(0).to(device)
                     classifications_logits = self.model(augmented_images)
-                    outputs = classifications_logits.squeeze() # squeeze batch dimensionsd            
-                    batch_predictions.append(outputs.cpu().numpy())
-
+                    
+                    # Apply inverse transform to predictions to get back to original orientation
+                    inverse_transform = transformed.get_inverse_transform()
+                    classifications_logits = classifications_logits.squeeze(0)
+                    classifications_logits_native = inverse_transform(classifications_logits.cpu())
+                    
+                    outputs = classifications_logits_native.squeeze()
+                    batch_predictions.append(outputs.numpy())
+                
                 # Convert batch_predictions to labels
-                batch_predictions = np.array(batch_predictions)  # shape: (augmentationRounds, class logits, 150, 180, 155)
-                batch_labels = np.argmax(batch_predictions, axis=1)  # shape: (augmentationRounds, 150, 180, 155)
-
+                batch_predictions = np.array(batch_predictions)
+                batch_labels = np.argmax(batch_predictions, axis=1)
+                
                 # Perform majority voting
                 segmentation_mask_cropped = np.apply_along_axis(lambda x: np.argmax(np.bincount(x)), axis=0, arr=batch_labels)
-
+                
                 # Pad the segmentation mask to the original shape
                 segmentation_mask = self.pad_to_original_shape(segmentation_mask_cropped, dtype=np.uint8)
-
                 segmentation_masks.append(segmentation_mask)
-
-                labels = labels.float().to(device)
-
+                
                 # Compute entropy as uncertainty measure
                 epsilon = 1e-8
-                softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1) # convert logits to probabilities
-                softmax_probs = softmax_probs + epsilon # add epsilon to avoid log(0)
-                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) 
+                softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1)
+                softmax_probs = softmax_probs + epsilon
+                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0)
                 entropy = entropy.cpu().numpy()
-
-                # Compute uncertainty as the mean entropy across all classes (for now, reconsider later)
+                
+                # Compute uncertainty as the mean entropy across all classes
                 uncertainty = np.mean(entropy, axis=0)
-
+                
                 # Pad the uncertainty map to the original shape
                 uncertainty = self.pad_to_original_shape(uncertainty, dtype=np.float32)
-
                 uncertainties.append(uncertainty)
-
+        
         return segmentation_masks, uncertainties
 
     def perform_inference_dropout(self, data_loader, device, num_iterations=10):
