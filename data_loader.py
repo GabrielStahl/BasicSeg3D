@@ -17,7 +17,8 @@ class MRIDataset(Dataset):
     def __len__(self):
         return len(self.patient_folders)
 
-    def split_data(data_dir, train_ratio=0.9, val_ratio=0.1, test_ratio=0):
+    def split_data(data_dir, train_ratio=0.2, val_ratio=0.1, test_ratio=0, seed=None):
+        random.seed(seed)  # Set seed for reproducibility
         all_patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "541" not in folder] # Exclude secondary scans and patient 0541 who lacks segmentation
         random.shuffle(all_patient_folders)
         num_patients = len(all_patient_folders)
@@ -48,7 +49,7 @@ class MRIDataset(Dataset):
         normalized_input = normalized_input.astype(np.float32)
         target_image = target_image.astype(np.float32)
 
-        # Map intensity values to class indices: CE loss will expect target values to be between [0,3] for 4 classes
+        # Map intensity values to class indices
         intensity_to_class = {
             0: 0, # Background
             2: 1, # Outer tumor region

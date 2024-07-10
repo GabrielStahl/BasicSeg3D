@@ -270,15 +270,15 @@ def main():
     model.eval()
 
     # Split the data into train, validation, and test sets
-    inference_folders, _, _ = MRIDataset.split_data(config.test_dir, train_ratio=0.1, val_ratio=0.0, test_ratio=0.0)
+    inference_folders, _, _ = MRIDataset.split_data(config.data_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0, seed=42)
 
-    print(f"Getting patients from directory: {config.test_dir}")
+    print(f"Getting patients from directory: {config.data_dir}")
     print(f"Performing inference on: {len(inference_folders)} patients")
 
     # Create an instance of the Inference class based on the selected uncertainty estimation method
     inference = Inference(model, config.uncertainty_method)
     
-    dataset = MRIDataset(config.test_dir, inference_folders)
+    dataset = MRIDataset(config.data_dir, inference_folders)
     
     data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
     

@@ -7,7 +7,7 @@ import os
 environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if the environment variable is not set
 
 if environment == 'local':
-    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/evaluate_data/" #evaluate_data/ or train_data/
+    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/train_data/" #evaluate_data/ or train_data/
     test_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/test_data/"
     model_save_path = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/BasicSeg3D/checkpoints/"
     output_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/BasicSeg3D/Predicted_Segmentations/"
@@ -16,7 +16,7 @@ elif environment == 'cluster':
     data_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/"
     test_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/TEST_SET/"
     model_save_path = '/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Checkpoints/'
-    output_dir = "/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Predicted_Segmentations/"
+    output_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions/"
     print('Environment is: cluster')
 
 
@@ -36,7 +36,7 @@ if environment == 'local':
 elif environment == 'cluster':
     batch_size = 1
     learning_rate = 0.01
-    epochs = 80
+    epochs = 2
 
 # Uncertainty quantification configuration
 uncertainty_method = "dropout"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout"
