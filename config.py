@@ -36,7 +36,7 @@ if environment == 'local':
 elif environment == 'cluster':
     batch_size = 1
     learning_rate = 0.01
-    epochs = 2
+    epochs = 120
 
 # Uncertainty quantification configuration
 uncertainty_method = "dropout"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout"
