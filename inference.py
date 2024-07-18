@@ -7,7 +7,7 @@ import config
 import torch.nn as nn
 from data_loader import MRIDataset
 import torchvision.transforms as v2
-from torchvision.transforms import functional as F
+import torch.nn.functional as F
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 import torchio as tio
@@ -247,6 +247,50 @@ class Inference:
                 uncertainties.append(uncertainty)
 
         return segmentation_masks, uncertainties
+    
+    def perform_inference_deep_ensemble(self, data_loader, device, models):
+        for model in models:
+            model.eval()
+
+        segmentation_masks = []
+        uncertainties = []
+
+        with torch.no_grad():
+            for input_tensor, _ in tqdm(data_loader):
+                input_tensor = input_tensor.to(device)
+                ensemble_outputs = []
+
+                for model in models:
+                    output = model(input_tensor)
+                    output = output.squeeze(0) # Remove batch dimension
+                    ensemble_outputs.append(output)
+
+                # Stack outputs from all models
+                ensemble_outputs = torch.stack(ensemble_outputs)  # Shape: [num_models, classes, d, h, w]
+                
+                # Apply softmax to convert logits to probabilities
+                softmax_probs = F.softmax(ensemble_outputs, dim=1) # Shape: [num_models, classes, d, h, w]
+                
+                # Compute mean prediction
+                mean_output = torch.mean(softmax_probs, dim=0)  # Shape: [classes, d, h, w]
+                
+                # Compute segmentation mask
+                segmentation_mask = torch.argmax(mean_output, dim=0)  # Shape: [d, h, w]
+                segmentation_mask = self.postprocess_output(segmentation_mask.unsqueeze(0))  # Shape: [240, 240, 155]
+                segmentation_masks.append(segmentation_mask)
+
+                # Compute entropy as uncertainty measure
+                epsilon = 1e-8
+                entropy = -torch.sum(softmax_probs * torch.log(softmax_probs + epsilon), dim=1)  # Shape: [num_models, classes, d, h, w]
+                
+                # Compute uncertainty as the mean entropy across all models
+                uncertainty = torch.mean(entropy, dim=0)  # Shape: [batch, d, h, w]
+                
+                # Pad the uncertainty map to the original shape
+                uncertainty = self.pad_to_original_shape(uncertainty.cpu().numpy(), dtype=np.float32)
+                uncertainties.append(uncertainty)
+
+        return segmentation_masks, uncertainties
 
 def main():
     # Device configuration
@@ -258,7 +302,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        weights = "model_1_final_epoch.pth"
+        weights = "new_model_1_best_epoch.pth"
         model_save_path = os.path.join(config.model_save_path, weights)
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path + weights}")
@@ -333,6 +377,40 @@ def main():
 
     elif config.uncertainty_method == "dropout":
         segmentation_masks, uncertainties = inference.perform_inference_dropout(data_loader, device)
+        
+        for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
+            patient_number = inference_folders[i].split("_")[0].split("-")[-1]
+            
+            output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
+            segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
+            nib.save(segmentation_nifti, output_path)
+            print(f"Segmentation mask saved at: {output_path}")
+            
+            uncertainty_path = os.path.join(config.output_dir, f"uncertainty_UCSF-PDGM-{patient_number}.nii.gz")
+            uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
+            nib.save(uncertainty_nifti, uncertainty_path)
+            print(f"Uncertainty map saved at: {uncertainty_path}")
+
+    elif config.uncertainty_method == "deep_ensemble":
+        models = []
+        for i in range(3):  # Assuming we have 3 models in the ensemble
+            model = UNet(in_channels=config.in_channels, out_channels=config.out_channels, dropout=config.dropout)
+            model.to(device)
+            
+            # Load the trained model weights
+            weights = f"new_model_{i}_best_epoch.pth"
+            model_save_path = os.path.join(config.model_save_path, weights)
+            if os.path.exists(model_save_path):
+                model.load_state_dict(torch.load(model_save_path, map_location=device))
+                print(f"Loaded trained model weights from: {model_save_path}")
+            else:
+                print(f"Trained model weights not found at: {model_save_path}")
+                return
+        
+        models.append(model)
+
+        inference = Inference(models[0], config.uncertainty_method)  # We pass the first model, but it won't be used
+        segmentation_masks, uncertainties = inference.perform_inference_deep_ensemble(data_loader, device, models)
         
         for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
             patient_number = inference_folders[i].split("_")[0].split("-")[-1]
