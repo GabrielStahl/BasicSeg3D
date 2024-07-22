@@ -248,6 +248,35 @@ class Inference:
 
         return segmentation_masks, uncertainties
     
+    def perform_inference_dropout_single(self, input_data, device, num_iterations=10):
+        self.model.train()  # Set the model to train mode to enable dropout
+        
+        # input_data is a tuple (input_tensor, target_tensor)
+        input_tensor = input_data[0].to(device)
+        
+        outputs = []
+
+        with torch.no_grad():
+            for _ in range(num_iterations):
+                output = self.model(input_tensor)
+                output = nn.functional.softmax(output, dim=1)
+                outputs.append(output)
+
+        # Compute the mean and variance of the outputs
+        outputs = torch.stack(outputs)
+        mean_output = torch.mean(outputs, dim=0)
+        var_output = torch.var(outputs, dim=0)
+
+        # Apply argmax to obtain the class indices
+        segmentation_mask = torch.argmax(mean_output, dim=1)
+        segmentation_mask = self.postprocess_output(segmentation_mask)
+
+        # Compute the epistemic uncertainty
+        uncertainty = torch.mean(var_output, dim=1)
+        uncertainty = self.pad_to_original_shape(uncertainty.squeeze().cpu().numpy(), dtype=np.float32)
+
+        return segmentation_mask, uncertainty
+    
     def perform_inference_deep_ensemble(self, data_loader, device, models):
         for model in models:
             model.eval()
@@ -376,16 +405,19 @@ def main():
             print(f"Uncertainty map saved at: {uncertainty_path}")
 
     elif config.uncertainty_method == "dropout":
-        segmentation_masks, uncertainties = inference.perform_inference_dropout(data_loader, device)
-        
-        for i, (segmentation_mask, uncertainty_map) in enumerate(zip(segmentation_masks, uncertainties)):
+        for i, input_data in enumerate(tqdm(data_loader)):
             patient_number = inference_folders[i].split("_")[0].split("-")[-1]
             
+            # Perform inference for a single patient
+            segmentation_mask, uncertainty_map = inference.perform_inference_dropout_single(input_data, device)
+            
+            # Save segmentation mask
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
             segmentation_nifti = nib.Nifti1Image(segmentation_mask, affine=np.eye(4))
             nib.save(segmentation_nifti, output_path)
             print(f"Segmentation mask saved at: {output_path}")
             
+            # Save uncertainty map
             uncertainty_path = os.path.join(config.output_dir, f"uncertainty_UCSF-PDGM-{patient_number}.nii.gz")
             uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
             nib.save(uncertainty_nifti, uncertainty_path)
