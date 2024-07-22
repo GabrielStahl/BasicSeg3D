@@ -16,7 +16,7 @@ elif environment == 'cluster':
     data_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/"
     test_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/TEST_SET/"
     model_save_path = '/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Checkpoints/'
-    output_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions/"
+    output_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions_test_set/"
     print('Environment is: cluster')
 
 
