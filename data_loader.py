@@ -34,7 +34,6 @@ class MRIDataset(Dataset):
         patient_folder = self.patient_folders[index]
         patient_number = patient_folder.split("_")[0].split("-")[-1]
         input_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_{self.modality}.nii.gz")
-        print(f"got image: {input_path}")
         target_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_tumor_segmentation.nii.gz")
         input_image = self._load_nifti_image(input_path)
         target_image = self._load_nifti_image(target_path)
