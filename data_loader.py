@@ -32,7 +32,7 @@ class MRIDataset(Dataset):
     def __getitem__(self, index):
         patient_folder = self.patient_folders[index]
         patient_number = patient_folder.split("_")[0].split("-")[-1]
-        input_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_T2_bias.nii.gz")
+        input_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_FLAIR_bias.nii.gz")
         target_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_tumor_segmentation.nii.gz")
         input_image = self._load_nifti_image(input_path)
         target_image = self._load_nifti_image(target_path)
@@ -106,7 +106,7 @@ def visualize_example(data_dir):
     # Load the original input image without cropping
     patient_folder = dataset.patient_folders[0]
     patient_number = patient_folder.split("_")[0].split("-")[-1]
-    original_input_path = os.path.join(data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_T2_bias.nii.gz")
+    original_input_path = os.path.join(data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_FLAIR_bias.nii.gz")
     print(original_input_path)
     original_input_image = dataset._load_nifti_image(original_input_path)
 

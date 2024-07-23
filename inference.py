@@ -347,7 +347,7 @@ def main():
             nib.save(segmentation_nifti, output_path)
             print(f"Segmentation mask saved at: {output_path}")
             
-            uncertainty_path = os.path.join(config.output_dir, f"TTA_UMap_UCSF-PDGM-{patient_number}.nii.gz")
+            uncertainty_path = os.path.join(config.output_dir, f"test_time_augmentation_UMap_UCSF-PDGM-{patient_number}.nii.gz")
             uncertainty_map = uncertainty_map.astype(np.float32)
             uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
             nib.save(uncertainty_nifti, uncertainty_path)
@@ -400,7 +400,7 @@ def main():
             nib.save(segmentation_nifti, output_path)
             print(f"Segmentation mask saved at: {output_path}")
             
-            uncertainty_path = os.path.join(config.output_dir, f"deepEnsemble_UMap_UCSF-PDGM-{patient_number}.nii.gz")
+            uncertainty_path = os.path.join(config.output_dir, f"deep_ensemble_UMap_UCSF-PDGM-{patient_number}.nii.gz")
             uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
             nib.save(uncertainty_nifti, uncertainty_path)
             print(f"Uncertainty map saved at: {uncertainty_path}")
