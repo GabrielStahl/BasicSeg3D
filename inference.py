@@ -10,7 +10,7 @@ import torchvision.transforms as v2
 import torch.nn.functional as F
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-import torchio as tio # Uncomment this line after installing torchio on the cluster
+#import torchio as tio # Uncomment this line after installing torchio on the cluster
 
 class Inference:
     """ Perform inference using the trained model, optionally with uncertainty maps"""
