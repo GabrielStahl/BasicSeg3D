@@ -8,11 +8,12 @@ import matplotlib.pyplot as plt
 import config
 
 class MRIDataset(Dataset):
-    def __init__(self, data_dir, patient_folders, crop_size=config.crop_size, transform=None):
+    def __init__(self, data_dir, patient_folders, modality = "FLAIR_bias", crop_size=config.crop_size, transform=None):
         self.data_dir = data_dir
         self.patient_folders = patient_folders #self._get_patient_folders()
         self.crop_size = crop_size
         self.transform = transform
+        self.modality = modality
 
     def __len__(self):
         return len(self.patient_folders)
@@ -32,7 +33,8 @@ class MRIDataset(Dataset):
     def __getitem__(self, index):
         patient_folder = self.patient_folders[index]
         patient_number = patient_folder.split("_")[0].split("-")[-1]
-        input_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_FLAIR_bias.nii.gz")
+        input_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_{self.modality}.nii.gz")
+        print(f"got image: {input_path}")
         target_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_tumor_segmentation.nii.gz")
         input_image = self._load_nifti_image(input_path)
         target_image = self._load_nifti_image(target_path)

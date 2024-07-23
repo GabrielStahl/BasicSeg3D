@@ -91,13 +91,22 @@ def main():
     # Device configuration
     environment = config.environment
 
+    # Read argument for saving the model
+    if len(sys.argv) > 1:
+        modelID = sys.argv[1]
+        modality = sys.argv[2]
+    else:
+        modelID = "basicseg3d"
+        modality = "FLAIR_bias"
+
+
     # Split the data into train, validation, and test sets
     train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
 
     # Load the datasets
-    train_dataset = MRIDataset(config.data_dir, train_folders)
-    val_dataset = MRIDataset(config.data_dir, val_folders)
-    test_dataset = MRIDataset(config.data_dir, test_folders)
+    train_dataset = MRIDataset(config.data_dir, train_folders, modality)
+    val_dataset = MRIDataset(config.data_dir, val_folders, modality)
+    test_dataset = MRIDataset(config.data_dir, test_folders, modality)
 
     # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
@@ -149,12 +158,6 @@ def main():
 
     # Create the GradScaler
     scaler = GradScaler()
-
-    # Read argument for saving the model
-    if len(sys.argv) > 1:
-        modelID = sys.argv[1]
-    else:
-        modelID = "basicseg3d"
 
     # Training loop
     for epoch in range(config.epochs):
