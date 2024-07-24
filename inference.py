@@ -372,27 +372,28 @@ def main():
             nib.save(uncertainty_nifti, uncertainty_path)
             print(f"Uncertainty map saved at: {uncertainty_path}")
 
-    elif config.uncertainty_method == "deep_ensemble":
+    elif config.uncertainty_method == "deep_ensemble" or config.uncertainty_method == "modality_ensemble":
         models = []
-        for i in range(3):  # Assuming we have 3 models in the ensemble
+        ensemble_path = config.ensemble_path
+        
+        weight_files = [f for f in os.listdir(ensemble_path) if f.endswith('.pth')]
+        
+        for weight_file in weight_files:
             model = UNet(in_channels=config.in_channels, out_channels=config.out_channels, dropout=config.dropout)
             model.to(device)
+            weight_path = os.path.join(ensemble_path, weight_file)
             
-            weights = f"new_model_{i}_best_epoch.pth"
-            model_save_path = os.path.join(config.model_save_path, weights)
-            if os.path.exists(model_save_path):
-                model.load_state_dict(torch.load(model_save_path, map_location=device))
-                print(f"Loaded trained model weights from: {model_save_path}")
-            else:
-                print(f"Trained model weights not found at: {model_save_path}")
-                return
-            models.append(model)
-
+            try:
+                model.load_state_dict(torch.load(weight_path, map_location=device))
+                print(f"Loaded trained model weights from: {weight_path}")
+                models.append(model)
+            except Exception as e:
+                print(f"Error loading weights from {weight_path}: {str(e)}")
+        
         inference = Inference(models[0], config.uncertainty_method)  # We pass the first model, but it won't be used
         
         for i, input_data in enumerate(tqdm(data_loader)):
             patient_number = inference_folders[i].split("_")[0].split("-")[-1]
-            
             segmentation_mask, uncertainty_map = inference.inference_deep_ensemble(input_data, device, models)
             
             output_path = os.path.join(config.output_dir, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
@@ -400,7 +401,7 @@ def main():
             nib.save(segmentation_nifti, output_path)
             print(f"Segmentation mask saved at: {output_path}")
             
-            uncertainty_path = os.path.join(config.output_dir, f"deep_ensemble_UMap_UCSF-PDGM-{patient_number}.nii.gz")
+            uncertainty_path = os.path.join(config.output_dir, f"{config.uncertainty_method}_UMap_UCSF-PDGM-{patient_number}.nii.gz")
             uncertainty_nifti = nib.Nifti1Image(uncertainty_map, affine=np.eye(4))
             nib.save(uncertainty_nifti, uncertainty_path)
             print(f"Uncertainty map saved at: {uncertainty_path}")

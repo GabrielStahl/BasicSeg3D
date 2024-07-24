@@ -3,32 +3,19 @@ import numpy as np
 import nibabel as nib
 import torch
 from torch.utils.data import Dataset, DataLoader
-import random
 import matplotlib.pyplot as plt
 import config
 
 class MRIDataset(Dataset):
-    def __init__(self, data_dir, patient_folders, modality = "FLAIR_bias", crop_size=config.crop_size, transform=None):
+    def __init__(self, data_dir, modality = "FLAIR_bias", crop_size=config.crop_size, transform=None):
         self.data_dir = data_dir
-        self.patient_folders = patient_folders #self._get_patient_folders()
+        self.patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder]
         self.crop_size = crop_size
         self.transform = transform
         self.modality = modality
 
     def __len__(self):
         return len(self.patient_folders)
-
-    def split_data(data_dir, train_ratio=0.9, val_ratio=0.1, test_ratio=0, seed=None):
-        random.seed(seed)  # Set seed for reproducibility
-        all_patient_folders = [folder for folder in os.listdir(data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "541" not in folder] # Exclude secondary scans and patient 0541 who lacks segmentation
-        random.shuffle(all_patient_folders)
-        num_patients = len(all_patient_folders)
-        train_size = int(num_patients * train_ratio)
-        val_size = int(num_patients * val_ratio)
-        train_folders = all_patient_folders[:train_size]
-        val_folders = all_patient_folders[train_size:train_size + val_size]
-        test_folders = all_patient_folders[train_size + val_size:]
-        return train_folders, val_folders, test_folders
 
     def __getitem__(self, index):
         patient_folder = self.patient_folders[index]
@@ -73,10 +60,6 @@ class MRIDataset(Dataset):
             normalized_input = self.transform(normalized_input)
 
         return normalized_input, target_image
-
-    def _get_patient_folders(self):
-        """Use this function to get all pattient folders in the data directory"""
-        return [folder for folder in os.listdir(self.data_dir) if folder.startswith("UCSF-PDGM-") and "FU" not in folder and "541" not in folder]
 
     def _load_nifti_image(self, path):
         image = nib.load(path).get_fdata()

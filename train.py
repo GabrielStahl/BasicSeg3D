@@ -99,14 +99,9 @@ def main():
         modelID = "basicseg3d"
         modality = "FLAIR_bias"
 
-
-    # Split the data into train, validation, and test sets
-    train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
-
     # Load the datasets
-    train_dataset = MRIDataset(config.data_dir, train_folders, modality)
-    val_dataset = MRIDataset(config.data_dir, val_folders, modality)
-    test_dataset = MRIDataset(config.data_dir, test_folders, modality)
+    train_dataset = MRIDataset(config.train_dir, modality)
+    val_dataset = MRIDataset(config.val_dir, modality)
 
     # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
@@ -124,7 +119,6 @@ def main():
         # Create distributed samplers
         train_sampler = DistributedSampler(train_dataset)
         val_sampler = DistributedSampler(val_dataset, shuffle=False)
-        test_sampler = DistributedSampler(test_dataset, shuffle=False)
     else:
         rank = 0
         world_size = 1
@@ -133,7 +127,6 @@ def main():
         # Set samplers to None
         train_sampler = None
         val_sampler = None
-        test_sampler = None
 
         device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -141,7 +134,6 @@ def main():
     # Create data loaders
     train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=train_sampler, shuffle=(train_sampler is None), num_workers=0)
     val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, sampler=val_sampler, shuffle=False, num_workers=0)
-    test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, sampler=test_sampler, shuffle=False, num_workers=0)
 
     # Create the model
     model = UNet(in_channels=config.in_channels, out_channels=config.out_channels, dropout=config.dropout)
