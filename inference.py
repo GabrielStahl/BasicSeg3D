@@ -277,7 +277,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        weights = "new_model_1_best_epoch.pth"
+        weights = "T1c_bias_model_0_copy.pth"
         model_save_path = os.path.join(config.model_save_path, weights)
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path + weights}")
@@ -290,9 +290,7 @@ def main():
 
     # Set data directory
     directory = config.test_dir
-
-    # Split the data into train, validation, and test sets
-    inference_folders, _, _ = MRIDataset.split_data(directory, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0, seed=42)
+    inference_folders = [f for f in os.listdir(directory) if f.startswith("UCSF-PDGM")]
 
     print(f"Getting patients from directory: {directory}")
     print(f"Performing inference on: {len(inference_folders)} patients")
@@ -300,7 +298,7 @@ def main():
     # Create an instance of the Inference class based on the selected uncertainty estimation method
     inference = Inference(model, config.uncertainty_method)
     
-    dataset = MRIDataset(directory, inference_folders)
+    dataset = MRIDataset(directory, modality = "T1c_bias")
     
     data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
