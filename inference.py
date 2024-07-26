@@ -107,6 +107,10 @@ class Inference:
         return segmentation_mask
     
     def inference_softmax(self, input_data, device):
+        """ 
+        Perform inference with softmax for uncertainty estimation
+        """
+
         self.model.eval()
         input_tensor = input_data[0].to(device)
 
@@ -114,10 +118,10 @@ class Inference:
             output = self.model(input_tensor)
             
             # Apply softmax to obtain class probabilities
-            output_probabilities = nn.functional.softmax(output, dim=1)
+            output_probabilities = nn.functional.softmax(output, dim=1) # shape output: torch.Size([1, 4, 150, 180, 155])
             
             # Get the uncertainty map
-            uncertainty_map = 1 - torch.max(output_probabilities, dim=1)[0]
+            uncertainty_map = 1 - torch.max(output_probabilities, dim=1)[0] # shape uncertainty_map: torch.Size([1, 150, 180, 155])
 
             # squeeze batch dimension, pad to original shape
             uncertainty_map = uncertainty_map.squeeze(0)
