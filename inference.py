@@ -293,7 +293,7 @@ def main():
     model.eval()
 
     # Set data directory
-    directory = config.test_dir
+    directory = config.train_dir # CHOOSE FROM: config.train_dir, config.val_dir, config.test_dir
     inference_folders = [f for f in os.listdir(directory) if f.startswith("UCSF-PDGM")]
 
     print(f"Getting patients from directory: {directory}")
