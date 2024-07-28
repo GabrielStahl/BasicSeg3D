@@ -22,7 +22,7 @@ elif environment == 'cluster':
     test_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/TEST_SET/"
     model_save_path = '/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Checkpoints/'
     ensemble_path = "/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Checkpoints/modality_ensemble/"
-    output_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions_train_set/" # CHOOSE FROM: predictions_train_set, predictions_test_set
+    output_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions_val_set/" # CHOOSE FROM: predictions_train_set, predictions_val_set , predictions_test_set
     print('Environment is: cluster')
 
 
