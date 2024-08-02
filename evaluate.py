@@ -6,7 +6,6 @@ import config
 from utils import calculate_metrics_EVAL
 import os
 import tqdm
-print("import successful")
 
 def evaluate(model, val_dataloader, device):
     # Evaluate on the validation set
@@ -58,14 +57,16 @@ def main():
     # Device configuration
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
-    # Split the data into train, validation, and test sets
-    test_folders, _, _ = MRIDataset.split_data(config.test_dir, train_ratio=1.0, val_ratio=0.0, test_ratio=0.0) # don't split because all patients in test_folder should be used
+    test_folders = [f for f in os.listdir(config.test_dir) if f.startswith("UCSF-PDGM-")]
 
     print(f"Evaluating performance on patients in: {config.test_dir}")
     print(f"Number of validation patients: {len(test_folders)}")
 
+    modality = "DTI_eddy_FA"  # Choose from: "T1c_bias", "DTI_eddy_FA", "FLAIR_bias"
+    print(f"Evaluating performance on modality: {modality}")
+
     # Load the dataset
-    dataset = MRIDataset(config.test_dir, test_folders)
+    dataset = MRIDataset(config.test_dir, modality=modality)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=0)
 
     # Create the model
@@ -73,7 +74,7 @@ def main():
 
     # Load the trained model weights
     if os.path.exists(config.model_save_path):
-        model_save_path = os.path.join(config.model_save_path, "model_1_final_epoch.pth")
+        model_save_path = os.path.join(config.ensemble_path, f"{modality}_model_0.pth")
         model.load_state_dict(torch.load(model_save_path, map_location=device))
         print(f"Loaded trained model weights from: {config.model_save_path}")
     else:

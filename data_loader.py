@@ -75,39 +75,3 @@ class MRIDataset(Dataset):
 
         cropped_image = image[start_depth:start_depth+crop_depth, start_height:start_height+crop_height, start_width:start_width+crop_width]
         return cropped_image
-
-def visualize_example(data_dir):
-
-    train_folders, val_folders, test_folders = MRIDataset.split_data(config.data_dir)
-
-    dataset = MRIDataset(data_dir, train_folders)
-    input_image, target_image = dataset[0]
-
-    # Convert PyTorch tensors back to numpy arrays for visualization
-    input_image = input_image.numpy().squeeze()
-    target_image = target_image.numpy().squeeze()
-
-    # Load the original input image without cropping
-    patient_folder = dataset.patient_folders[0]
-    patient_number = patient_folder.split("_")[0].split("-")[-1]
-    original_input_path = os.path.join(data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_FLAIR_bias.nii.gz")
-    print(original_input_path)
-    original_input_image = dataset._load_nifti_image(original_input_path)
-
-    # Visualize the original and cropped input image
-    plt.subplot(1, 2, 1)
-    plt.imshow(original_input_image[:, original_input_image.shape[2] // 2, :], cmap='gray')
-    plt.title("Original Input Image")
-    plt.axis('off')
-
-    plt.subplot(1, 2, 2)
-    plt.imshow(input_image[:, input_image.shape[2] // 2, :], cmap='gray')
-    plt.title("Cropped Input Image")
-    plt.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-if __name__ == "__main__":
-    data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/evaluate_data/"
-    visualize_example(data_dir)
