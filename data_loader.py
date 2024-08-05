@@ -59,7 +59,7 @@ class MRIDataset(Dataset):
         if self.transform:
             normalized_input = self.transform(normalized_input)
 
-        return normalized_input, target_image
+        return normalized_input, target_image, patient_number
 
     def _load_nifti_image(self, path):
         image = nib.load(path).get_fdata()

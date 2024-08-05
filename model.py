@@ -30,12 +30,6 @@ class UNet(nn.Module):
         self.dec2 = self.conv_block(64 + 64, 32)
         self.dec1 = nn.Conv3d(32 + 32, out_channels, kernel_size=1)
 
-        # Deep supervision outputs
-        #self.out5 = nn.Conv3d(256, out_channels, kernel_size=1)
-        #self.out4 = nn.Conv3d(128, out_channels, kernel_size=1)
-        #self.out3 = nn.Conv3d(64, out_channels, kernel_size=1)
-        #self.out2 = nn.Conv3d(32, out_channels, kernel_size=1)
-
     def conv_block(self, in_channels, out_channels, dropout=None):
         layers = [
             nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -66,11 +60,5 @@ class UNet(nn.Module):
         dec2 = self.dec2(torch.cat([nn.functional.interpolate(dec3, enc2.size()[2:], mode='trilinear', align_corners=True), enc2], dim=1))
         dec1 = self.dec1(torch.cat([nn.functional.interpolate(dec2, enc1.size()[2:], mode='trilinear', align_corners=True), enc1], dim=1))
 
-        # Deep supervision outputs
-        #out5 = self.out5(dec5)
-        #out4 = self.out4(dec4)
-        #out3 = self.out3(dec3)
-        #out2 = self.out2(dec2)
-
-        return dec1 # We simiply output the logits bc the loss function we will use (CrossEntropyLoss) likes to take the logits as input
+        return dec1 
 

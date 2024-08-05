@@ -3,18 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-
-def visualize_images(images, titles=None, figsize=(10, 5)):
-    plt.figure(figsize=figsize)
-    for i, image in enumerate(images):
-        plt.subplot(1, len(images), i+1)
-        plt.imshow(image, cmap='gray')
-        if titles:
-            plt.title(titles[i])
-        plt.axis('off')
-    plt.tight_layout()
-    plt.show()
-
 class DiceLoss(nn.Module):
     """ Calculate Dice loss for each class separately and return average
     

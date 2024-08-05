@@ -140,9 +140,9 @@ class Inference:
         
         # Define the test-time augmentation transforms
         test_transforms = tio.Compose([
-            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05)),
+            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05), image_interpolation='nearest', default_pad_value=0),
             tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),
-        ])
+            ])
         
         input_tensor = input_data[0]
         if len(input_tensor.shape) > 4:

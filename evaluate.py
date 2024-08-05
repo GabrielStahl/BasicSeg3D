@@ -33,8 +33,10 @@ def evaluate(model, val_dataloader, device):
         'dice_tumour_core': 0.0
     }
 
+    patient_dice_scores = {}
+
     with torch.no_grad():
-        for inputs, targets in tqdm.tqdm(val_dataloader):
+        for inputs, targets, patient_id in tqdm.tqdm(val_dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
 
             outputs = model(inputs) # torch.Size([1, 4, 150, 180, 116]) with logits for 4 classes
@@ -46,11 +48,16 @@ def evaluate(model, val_dataloader, device):
             for key, value in metrics.items():
                 val_metrics[key] += value
 
+            # Calculate average Dice score for this patient
+            patient_avg_dice = (metrics['dice_background'] + metrics['dice_outer_tumour'] + 
+                                metrics['dice_enhancing_tumour'] + metrics['dice_tumour_core']) / 4
+            patient_dice_scores[patient_id[0]] = patient_avg_dice
+
     num_samples = len(val_dataloader)
     for key in val_metrics.keys():
         val_metrics[key] /= num_samples
 
-    return val_metrics
+    return val_metrics, patient_dice_scores
 
 
 def main():
@@ -62,7 +69,7 @@ def main():
     print(f"Evaluating performance on patients in: {config.test_dir}")
     print(f"Number of validation patients: {len(test_folders)}")
 
-    modality = "DTI_eddy_FA"  # Choose from: "T1c_bias", "DTI_eddy_FA", "FLAIR_bias"
+    modality = "T1c_bias"  # Choose from: "T1c_bias", "DTI_eddy_FA", "FLAIR_bias"
     print(f"Evaluating performance on modality: {modality}")
 
     # Load the dataset
@@ -82,10 +89,20 @@ def main():
         return
 
     # Evaluate the model
-    val_metrics = evaluate(model, dataloader, device)
+    val_metrics, patient_dice_scores = evaluate(model, dataloader, device)
 
     for key, value in val_metrics.items():
         print(f"{key}: {value:.4f}")
+
+    # Find best and worst performing patients
+    best_patient = max(patient_dice_scores, key=patient_dice_scores.get)
+    worst_patient = min(patient_dice_scores, key=patient_dice_scores.get)
+
+    # Print best and worst patient Dice scores
+    print("\nBest and Worst Patient Dice Scores:")
+    print(f"Best - Patient {best_patient}: {patient_dice_scores[best_patient]:.4f}")
+    print(f"Worst - Patient {worst_patient}: {patient_dice_scores[worst_patient]:.4f}")
+
 
 if __name__ == "__main__":
     main()
