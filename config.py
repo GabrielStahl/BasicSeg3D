@@ -2,9 +2,12 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 
+environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if the environment variable is not set
+
 # Data configuration
 
-environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if the environment variable is not set
+# CHOOSE data subset
+data_subset = "train_set" # CHOOSE FROM: train_set, val_set, test_set
 
 if environment == 'local':
     data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/" 
@@ -22,7 +25,7 @@ elif environment == 'cluster':
     test_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/TEST_SET/"
     model_save_path = '/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Checkpoints/'
     ensemble_path = "/cluster/project2/UCSF_PDGM_dataset/BasicSeg/Checkpoints/modality_ensemble/"
-    output_dir = "/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions_val_set/" # CHOOSE FROM: predictions_train_set, predictions_val_set , predictions_test_set
+    output_dir = f"/cluster/project2/UCSF_PDGM_dataset/UCSF-PDGM-v3/predictions_{data_subset}/" 
     print('Environment is: cluster')
 
 
@@ -45,7 +48,7 @@ elif environment == 'cluster':
     epochs = 100
 
 # Uncertainty quantification configuration
-uncertainty_method = "test_time_augmentation"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout", "modality_ensemble"
+uncertainty_method = "softmax"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout", "modality_ensemble"
 
 if uncertainty_method == "dropout":
     dropout = 0.5
