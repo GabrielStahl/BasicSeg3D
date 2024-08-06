@@ -7,7 +7,7 @@ environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if th
 # Data configuration
 
 # CHOOSE data subset
-data_subset = "train_set" # CHOOSE FROM: train_set, val_set, test_set
+data_subset = "val_set" # CHOOSE FROM: train_set, val_set, test_set
 
 if environment == 'local':
     data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/" 
