@@ -113,23 +113,14 @@ class Inference:
             
             # Apply softmax to obtain class probabilities
             output_probabilities = nn.functional.softmax(output, dim=1) # shape output: torch.Size([1, 4, 150, 180, 155])
-            
-            # Get the uncertainty map
-            uncertainty_map = 1 - torch.max(output_probabilities, dim=1)[0] # shape uncertainty_map: torch.Size([1, 150, 180, 155])
-
-            # Print range uncertainty
-            print(f"Uncertainty range: {torch.min(uncertainty_map).item()} - {torch.max(uncertainty_map).item()}")
 
             # Get normalized entropy map
-            entropy = -torch.sum(output_probabilities * torch.log(output_probabilities), dim=1)
-            entropy = entropy / torch.log(torch.tensor(4.0))
-
-            # print range entropy
-            print(f"Entropy range: {torch.min(entropy).item()} - {torch.max(entropy).item()}")
-
+            epsilon = 1e-8
+            entropy = -torch.sum(output_probabilities * torch.log(output_probabilities + epsilon), dim=1)
+            entropy = entropy / torch.log(torch.tensor(output_probabilities.shape[1]).float())
 
             # squeeze batch dimension, pad to original shape
-            uncertainty_map = uncertainty_map.squeeze(0)
+            uncertainty_map = entropy.squeeze(0)
             uncertainty_map = self.pad_to_original_shape(uncertainty_map.detach().cpu().numpy(), dtype=np.float32)
 
             # Apply argmax to obtain the class indices
@@ -192,19 +183,14 @@ class Inference:
             
             # only keep the majority voted class, get shape: torch.Size([7, 150, 180, 155])
 
+            # Get the index of the majority voted class for each voxel
+            majority_class_indices = torch.tensor(segmentation_mask_cropped).unsqueeze(0).expand(softmax_probs.shape[0], -1, -1, -1)
 
+            # Use gather to select the probability of the majority voted class for each voxel
+            majority_class_probs = torch.gather(softmax_probs, 1, majority_class_indices.unsqueeze(1)).squeeze(1)
 
-
-
-            softmax_probs = softmax_probs + epsilon
-            entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) # shape: torch.Size([4, 150, 180, 155]) <- this is the problem
-            # print range entropy
-            print(f"Entropy range: {torch.min(entropy).item()} - {torch.max(entropy).item()}")
-
-            # normalize entropy: WHY does it not range from 0 to 1?
-            entropy_norm = -(torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) / torch.log(torch.tensor(augmentation_rounds)))
-
-            print(f"Entropy norm range: {torch.min(entropy_norm).item()} - {torch.max(entropy_norm).item()}")
+            softmax_probs = majority_class_probs + epsilon
+            entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) # shape softmax_probs: torch.Size([7, 150, 180, 155])
 
             entropy = entropy.cpu().numpy()
             
@@ -239,20 +225,24 @@ class Inference:
             for _ in range(num_iterations):
                 output = self.model(input_tensor)
                 output = nn.functional.softmax(output, dim=1)
+                output = output.squeeze(0)  # Remove batch dimension
                 outputs.append(output)
 
-        # Compute the mean and variance of the outputs
+        # Compute the mean of the outputs
         outputs = torch.stack(outputs)
-        mean_output = torch.mean(outputs, dim=0)
-        var_output = torch.var(outputs, dim=0)
+        mean_output = torch.mean(outputs, dim=0) # shape: torch.Size([4, 150, 180, 155])
 
         # Apply argmax to obtain the class indices
-        segmentation_mask = torch.argmax(mean_output, dim=1)
-        segmentation_mask = self.postprocess_output(segmentation_mask)
+        segmentation_mask = torch.argmax(mean_output, dim=0)
+        segmentation_mask = self.postprocess_output(segmentation_mask.unsqueeze(0)) # add batch dimenstion to match expection of postprocess_output
 
-        # Compute the epistemic uncertainty
-        uncertainty = torch.mean(var_output, dim=1)
-        uncertainty = self.pad_to_original_shape(uncertainty.squeeze().cpu().numpy(), dtype=np.float32)
+        # Compute entropy as uncertainty measure
+        entropy = -torch.sum(mean_output * torch.log(mean_output), dim=0)
+
+        # normalize entropy
+        entropy = entropy / torch.log(torch.tensor(mean_output.shape[0]).float())
+        
+        uncertainty = self.pad_to_original_shape(entropy.squeeze().cpu().numpy(), dtype=np.float32)
 
         return segmentation_mask, uncertainty
     
@@ -332,6 +322,11 @@ def main():
     inference = Inference(model, config.uncertainty_method)
     
     dataset = MRIDataset(directory, modality = "T1c_bias")
+
+    # Load the datasets for 3 input correction model case
+    #UMap = "modality_ensemble"
+    #modality = "T1c_bias"
+    #dataset = CorrectionDataset("train_set", modality, UMap)
     
     data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
