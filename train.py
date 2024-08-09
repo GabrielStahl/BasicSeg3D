@@ -97,7 +97,7 @@ def main():
         modality = sys.argv[2]
     else:
         modelID = "basicseg3d"
-        modality = "FLAIR_bias"
+        modality = config.modality
 
     # Load the datasets
     train_dataset = MRIDataset(config.train_dir, modality)

@@ -9,6 +9,8 @@ environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if th
 # CHOOSE data subset
 data_subset = "test_set" # CHOOSE FROM: train_set, val_set, test_set
 
+modality = "T1c_bias" 
+
 if environment == 'local':
     data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/" 
     train_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/train_data/"

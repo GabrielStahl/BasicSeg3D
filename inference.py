@@ -136,7 +136,7 @@ class Inference:
         
         # Define the test-time augmentation transforms
         test_transforms = tio.Compose([
-            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05), image_interpolation='nearest', default_pad_value=0),
+            #tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05), image_interpolation='nearest', default_pad_value=0),
             tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),
             ])
         
@@ -179,17 +179,10 @@ class Inference:
             epsilon = 1e-8
 
             # Pass logits through softmax to get probabilities
-            softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1) # shape: torch.Size([7, 4, 150, 180, 155]) corresponding to [augmentation_rounds, classes, d, h, w]
-            
-            # only keep the majority voted class, get shape: torch.Size([7, 150, 180, 155])
+            softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1) # shape batch_predictions: torch.Size([7, 4, 150, 180, 155]) corresponding to [augmentation_rounds, classes, d, h, w]
 
-            # Get the index of the majority voted class for each voxel
-            majority_class_indices = torch.tensor(segmentation_mask_cropped).unsqueeze(0).expand(softmax_probs.shape[0], -1, -1, -1)
+            softmax_probs = softmax_probs + epsilon
 
-            # Use gather to select the probability of the majority voted class for each voxel
-            majority_class_probs = torch.gather(softmax_probs, 1, majority_class_indices.unsqueeze(1)).squeeze(1)
-
-            softmax_probs = majority_class_probs + epsilon
             entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) # shape softmax_probs: torch.Size([7, 150, 180, 155])
 
             entropy = entropy.cpu().numpy()
