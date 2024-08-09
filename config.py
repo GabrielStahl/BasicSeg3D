@@ -30,7 +30,7 @@ elif environment == 'cluster':
 
 
 # Model configuration
-in_channels = 1
+in_channels = 3
 out_channels = 4
 dropout = 0.3
 

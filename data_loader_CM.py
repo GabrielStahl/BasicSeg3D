@@ -34,8 +34,8 @@ class CorrectionDataset(Dataset):
 
         # Load original MRI, predicted segmentation, uncertainty map, and target segmentation
         mri_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_{self.modality}.nii.gz")
-        pred_seg_path = os.path.join(config.root_dir, f"predictions_{self.data_subset}", self.UMap, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
-        uncertainty_path = os.path.join(config.root_dir, f"predictions_{self.data_subset}", self.UMap, f"{self.UMap}_UMap_UCSF-PDGM-{patient_number}.nii.gz")
+        pred_seg_path = os.path.join(config.data_dir, f"predictions_{self.data_subset}", self.UMap, f"segmentation_UCSF-PDGM-{patient_number}.nii.gz")
+        uncertainty_path = os.path.join(config.data_dir, f"predictions_{self.data_subset}", self.UMap, f"{self.UMap}_UMap_UCSF-PDGM-{patient_number}.nii.gz")
         target_path = os.path.join(self.data_dir, patient_folder, f"UCSF-PDGM-{patient_number}_tumor_segmentation.nii.gz")
 
         mri_image = self._load_nifti_image(mri_path)
@@ -78,7 +78,7 @@ class CorrectionDataset(Dataset):
         if self.transform:
             input_image = self.transform(input_image)
 
-        return input_image, target_image, patient_number
+        return input_image, target_image#, patient_number
 
     def _load_nifti_image(self, path):
         return nib.load(path).get_fdata()
