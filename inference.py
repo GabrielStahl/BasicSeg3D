@@ -26,12 +26,6 @@ class Inference:
         self.uncertainty_method = uncertainty_method
         self.crop_size = config.crop_size
         self.original_shape = (240, 240, 155)
-
-        # Define transforms for test-time augmentation 
-        self.test_transforms = v2.Compose([
-            v2.RandomAffine(degrees=0, translate=(0.05, 0.05)),
-            v2.RandomHorizontalFlip(p=0.5)
-        ])
         
     def postprocess_output(self, output):
         """ Postprocess the model output
@@ -123,6 +117,17 @@ class Inference:
             # Get the uncertainty map
             uncertainty_map = 1 - torch.max(output_probabilities, dim=1)[0] # shape uncertainty_map: torch.Size([1, 150, 180, 155])
 
+            # Print range uncertainty
+            print(f"Uncertainty range: {torch.min(uncertainty_map).item()} - {torch.max(uncertainty_map).item()}")
+
+            # Get normalized entropy map
+            entropy = -torch.sum(output_probabilities * torch.log(output_probabilities), dim=1)
+            entropy = entropy / torch.log(torch.tensor(4.0))
+
+            # print range entropy
+            print(f"Entropy range: {torch.min(entropy).item()} - {torch.max(entropy).item()}")
+
+
             # squeeze batch dimension, pad to original shape
             uncertainty_map = uncertainty_map.squeeze(0)
             uncertainty_map = self.pad_to_original_shape(uncertainty_map.detach().cpu().numpy(), dtype=np.float32)
@@ -135,12 +140,12 @@ class Inference:
 
         return segmentation_mask, uncertainty_map
     
-    def inference_test_time_augmentation(self, input_data, device, augmentation_rounds=5):
+    def inference_test_time_augmentation(self, input_data, device, augmentation_rounds=7):
         self.model.eval()
         
         # Define the test-time augmentation transforms
         test_transforms = tio.Compose([
-            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05), image_interpolation='nearest', default_pad_value=0),
+            tio.RandomAffine(scales=(1, 1), translation=(5, 5, 5), image_interpolation='nearest', default_pad_value=0),
             tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),
             ])
         
@@ -157,6 +162,7 @@ class Inference:
                 
                 # Apply transform, send to device, and get model predictions
                 transformed = test_transforms(subject)
+
                 augmented_images = transformed['image'].data.unsqueeze(0).to(device)
                 classifications_logits = self.model(augmented_images)
                 
@@ -180,9 +186,26 @@ class Inference:
             
             # Compute entropy as uncertainty measure
             epsilon = 1e-8
-            softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1)
+
+            # Pass logits through softmax to get probabilities
+            softmax_probs = torch.softmax(torch.tensor(batch_predictions), dim=1) # shape: torch.Size([7, 4, 150, 180, 155]) corresponding to [augmentation_rounds, classes, d, h, w]
+            
+            # only keep the majority voted class, get shape: torch.Size([7, 150, 180, 155])
+
+
+
+
+
             softmax_probs = softmax_probs + epsilon
-            entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0)
+            entropy = -torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) # shape: torch.Size([4, 150, 180, 155]) <- this is the problem
+            # print range entropy
+            print(f"Entropy range: {torch.min(entropy).item()} - {torch.max(entropy).item()}")
+
+            # normalize entropy: WHY does it not range from 0 to 1?
+            entropy_norm = -(torch.sum(softmax_probs * torch.log(softmax_probs), dim=0) / torch.log(torch.tensor(augmentation_rounds)))
+
+            print(f"Entropy norm range: {torch.min(entropy_norm).item()} - {torch.max(entropy_norm).item()}")
+
             entropy = entropy.cpu().numpy()
             
             # Compute uncertainty as the mean entropy across all classes

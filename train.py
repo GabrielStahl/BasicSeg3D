@@ -4,6 +4,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from data_loader import MRIDataset
+from data_loader_CM import CorrectionDataset
 from model import UNet
 import config
 from utils import calculate_metrics, DiceLoss
@@ -100,8 +101,14 @@ def main():
         modality = "FLAIR_bias"
 
     # Load the datasets
-    train_dataset = MRIDataset(config.train_dir, modality)
-    val_dataset = MRIDataset(config.val_dir, modality)
+    #train_dataset = MRIDataset(config.train_dir, modality)
+    #val_dataset = MRIDataset(config.val_dir, modality)
+
+    # Load the datasets
+    UMap = "softmax"
+    modality = "T1c_bias"
+    train_dataset = CorrectionDataset("train_set", modality, UMap)
+    val_dataset = CorrectionDataset("val_set", modality, UMap)
 
     # Setup DDP and create distributed samplers if not in local environment
     if environment != 'local':
