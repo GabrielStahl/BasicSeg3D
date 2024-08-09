@@ -136,7 +136,7 @@ class Inference:
         
         # Define the test-time augmentation transforms
         test_transforms = tio.Compose([
-            tio.RandomAffine(scales=(1, 1), translation=(5, 5, 5), image_interpolation='nearest', default_pad_value=0),
+            tio.RandomAffine(scales=(1, 1), translation=(0.05, 0.05, 0.05), image_interpolation='nearest', default_pad_value=0),
             tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),
             ])
         
@@ -322,11 +322,6 @@ def main():
     inference = Inference(model, config.uncertainty_method)
     
     dataset = MRIDataset(directory, modality = "T1c_bias")
-
-    # Load the datasets for 3 input correction model case
-    #UMap = "modality_ensemble"
-    #modality = "T1c_bias"
-    #dataset = CorrectionDataset("train_set", modality, UMap)
     
     data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
     
