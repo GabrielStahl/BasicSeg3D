@@ -8,7 +8,7 @@ environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if th
 
 # CHOOSE data subset
 data_subset = "train_set" # CHOOSE FROM: train_set, val_set, test_set
-modality = "T1c_bias" 
+modality = "T1c_bias" # CHOOSE FROM: "T1c_bias", "DTI_eddy_FA", "FLAIR_bias"
 # Uncertainty quantification configuration
 uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout", "modality_ensemble"
 

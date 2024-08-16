@@ -273,6 +273,10 @@ class Inference:
             segmentation_mask = torch.argmax(mean_output, dim=0)  # Shape: [d, h, w]
             segmentation_mask = self.postprocess_output(segmentation_mask.unsqueeze(0))  # Shape: [240, 240, 155]
 
+            # Normalize softmax probabilities across num_models
+            softmax_probs = softmax_probs + 1e-8
+            softmax_probs = softmax_probs / torch.sum(softmax_probs, dim=0)
+
             # Compute entropy as uncertainty measure
             epsilon = 1e-8
             entropy = -torch.sum(softmax_probs * torch.log(softmax_probs + epsilon), dim=1)  # Shape: [num_models, d, h, w]
