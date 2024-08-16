@@ -117,7 +117,7 @@ def main():
         print(f"Rank: {rank}, World size: {world_size}, Local rank: {local_rank}, USING Device ID: {device_id}")
 
         # Create distributed samplers
-        train_sampler = DistributedSampler(train_dataset)
+        train_sampler = DistributedSampler(train_dataset, shuffle=True)
         val_sampler = DistributedSampler(val_dataset, shuffle=False)
     else:
         rank = 0

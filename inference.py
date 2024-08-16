@@ -229,11 +229,19 @@ class Inference:
         segmentation_mask = torch.argmax(mean_output, dim=0)
         segmentation_mask = self.postprocess_output(segmentation_mask.unsqueeze(0)) # add batch dimenstion to match expection of postprocess_output
 
+        # add epsilon to avoid log(0)
+        epsilon = 1e-8
+        mean_output = mean_output + epsilon
+
         # Compute entropy as uncertainty measure
         entropy = -torch.sum(mean_output * torch.log(mean_output), dim=0)
 
         # normalize entropy
         entropy = entropy / torch.log(torch.tensor(mean_output.shape[0]).float())
+
+        # print warning if nans in entropy
+        if torch.isnan(entropy).any():
+            print("Warning: NaNs in entropy map")
         
         uncertainty = self.pad_to_original_shape(entropy.squeeze().cpu().numpy(), dtype=np.float32)
 

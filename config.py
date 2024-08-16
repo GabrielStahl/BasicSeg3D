@@ -7,9 +7,11 @@ environment = os.environ.get('ENVIRONMENT', 'local')  # Default to 'local' if th
 # Data configuration
 
 # CHOOSE data subset
-data_subset = "test_set" # CHOOSE FROM: train_set, val_set, test_set
-
+data_subset = "train_set" # CHOOSE FROM: train_set, val_set, test_set
 modality = "T1c_bias" 
+# Uncertainty quantification configuration
+uncertainty_method = "none"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout", "modality_ensemble"
+
 
 if environment == 'local':
     data_dir = "/Users/Gabriel/MRes_Medical_Imaging/RESEARCH_PROJECT/DATA/" 
@@ -48,9 +50,6 @@ elif environment == 'cluster':
     batch_size = 1
     learning_rate = 0.001
     epochs = 100
-
-# Uncertainty quantification configuration
-uncertainty_method = "test_time_augmentation"  # Options: "none", "softmax", "deep_ensemble", "test_time_augmentation", "dropout", "modality_ensemble"
 
 if uncertainty_method == "dropout":
     dropout = 0.5
